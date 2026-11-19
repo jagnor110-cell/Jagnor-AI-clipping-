@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 """
-jagnor_master_worker.py — Unified Master Execution, 6-LLM AI Council, Trend Discovery & Publishing Engine
+jagnor_master_worker.py — Unified Master Execution, 4-Brain Free AI Council, Trend Discovery & Publishing Engine
 Orchestration Layer: Paperclip & GitHub Actions (`clipping_company.yml`)
 All-in-One Standalone Script: Built-in Social Publisher (YouTube Shorts + Instagram Graph API v22.0) & Gmail SMTP Reporter (no separate py required)
 
-6-Model AI Council (`AICouncil` — Every Video Passes Through All 6 Brains):
-1. Gemini (`GEMINI_API_KEY` / `google/gemini-2.5-flash`)        — Long-Context Transcript & Hook Window Analyst
-2. Claude (`ANTHROPIC_API_KEY` / `anthropic/claude-3.7-sonnet`) — Narrative Pacing & Sentence-Boundary Director
-3. Grok (`XAI_API_KEY` / `x-ai/grok-3-mini`)                    — Viral Edge, Scroll-Stopping 3s Hook & IG Captioner
-4. ChatGPT (`OPENAI_API_KEY` / `gpt-4.1-mini`)                  — YouTube Shorts High-CTR Title & SEO Optimizer
-5. NVIDIA NIM (`NVIDIA_API_KEY` / `nvidia/nemotron-3-super-120b-a12b`) — Engagement, Clarity & Hashtag Polish
-6. OpenRouter (`OPENROUTER_API_KEY` / `openrouter/auto`)        — Chief Consensus Judge & Universal Fallback Router
+4-Brain Free AI Council (`AICouncil` — 100% Free-Tier Stack):
+1. Gemini (`GEMINI_API_KEY` / `gemini-2.5-flash`)                       — Transcript & Viral Script Strategist
+2. Groq (`GROQ_API_KEY` / `llama-3.3-70b-versatile`)                    — Narrative Pacing, 3s Hook & IG Captioner
+3. NVIDIA NIM (`NVIDIA_API_KEY` / `nvidia/nemotron-3-super-120b-a12b`)  — YouTube Shorts Title, SEO & Hashtag Polisher
+4. OpenRouter (`OPENROUTER_API_KEY` / `openrouter/free`)                — Chief Consensus Judge & Universal Fallback Router
+
+Free Visual Engines (`--engine ai_faceless` with selectable `--art-style` & `--theme`):
+- Pollinations.ai (`POLLINATIONS_API_KEY`) -> Pexels HD Portrait Photos (`PEXELS_API_KEY`) -> Clean Branded Fallback
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ import fcntl
 import gc
 import json
 import logging
+import math
 import os
 import random
 import re
@@ -128,7 +130,7 @@ def format_manifest_report(
 ) -> tuple[str, str]:
     """
     Builds a concise, high-signal email subject and plain-text body with status,
-    6-Model AI Council details, public preview links, and YouTube/Instagram receipts.
+    4-Brain Free AI Council details, public preview links, and YouTube/Instagram receipts.
     """
     m = manifest or {}
     engine = m.get("source_mode") or m.get("engine", "unknown")
@@ -689,7 +691,7 @@ def process_manifest(
 
         published_receipts.append({"item": manifest["product_title"], **done_platforms})
 
-    elif engine in {"clipping", "ai_faceless", "raw_video_drop"}:
+    elif engine in {"clipping", "ai_faceless", "raw_video_drop", "motion_story"}:
         clips = manifest.get("clips", [])
         if not clips:
             raise ValueError("No clips found in clipping manifest.")
@@ -753,7 +755,7 @@ def process_manifest(
             "release_status": "CLEARED_FOR_CLIENT_DELIVERY",
         })
 
-    if engine in {"clipping", "ai_faceless", "raw_video_drop"}:
+    if engine in {"clipping", "ai_faceless", "raw_video_drop", "motion_story"}:
         all_done = all(c.get("published", False) for c in manifest.get("clips", []))
     elif engine == "digital_product":
         all_done = platforms.issubset(manifest.get("published_platforms", {}).keys())
@@ -923,25 +925,32 @@ class CompanyBrain:
 
 
 # ============================================================================
-# 2. THE 6-MODEL AI COUNCIL (GEMINI -> CLAUDE -> GROK -> CHATGPT -> NVIDIA NIM -> OPENROUTER)
+# 2. THE 4-BRAIN FREE AI COUNCIL (GEMINI -> GROQ -> NVIDIA NIM -> OPENROUTER)
 # ============================================================================
+
+ART_STYLE_PROMPTS: dict[str, str] = {
+    "dark_cinematic": "dark moody cinematic photography, dramatic rim lighting, ultra detailed 8k, shallow depth of field, no text",
+    "anime": "high-budget Japanese anime art style, vibrant cel shading, dynamic cinematic lighting, Makoto Shinkai aesthetic, no text",
+    "cyberpunk": "futuristic cyberpunk neon noir aesthetic, glowing cyan and magenta reflections, rain-slicked sci-fi lighting, ultra detailed, no text",
+    "3d_pixar": "stylized 3D animated film still, Pixar lighting quality, expressive cinematic render, global illumination, no text",
+    "comic_book": "bold graphic novel comic book illustration, inked outlines, dramatic halftone shading, vibrant high-contrast colors, no text",
+    "minimalist_sketch": "clean editorial minimalist ink and charcoal sketch illustration on dark slate paper, gold accent highlights, modern aesthetic, no text",
+    "oil_painting": "dramatic classical oil painting, rich visible brushstrokes, chiaroscuro lighting, museum masterpiece aesthetic, no text",
+}
+
 
 class AICouncil:
     """
-    Passes each video or product brief sequentially through all 6 AI brains:
-      Stage 1 (Gemini)     : Long-Context Transcript & Hook Window Analyst
-      Stage 2 (Claude)     : Narrative Pacing & Sentence-Boundary Director
-      Stage 3 (Grok)       : Viral 3-Second Top-Banner Hook & Instagram Reels Copywriter
-      Stage 4 (ChatGPT)    : High-CTR YouTube Shorts Title & SEO Strategist
-      Stage 5 (NVIDIA NIM) : Engagement, Clarity & Cross-Platform Hashtag Polish
-      Stage 6 (OpenRouter) : Chief Consensus Judge (`openrouter/auto`) & Universal Fallback Router
+    Passes each video or product brief sequentially through 4 free-tier AI brains:
+      Stage 1 (Gemini)     : Long-Context Transcript & Viral Script Strategist
+      Stage 2 (Groq)       : Narrative Pacing, Viral 3-Second Hook & IG Captioner
+      Stage 3 (NVIDIA NIM) : High-CTR YouTube Shorts Title, SEO & Hashtag Polisher
+      Stage 4 (OpenRouter) : Chief Consensus Judge (`openrouter/free`) & Universal Fallback Router
     """
 
     def __init__(self) -> None:
-        self.openai_key = os.environ.get("OPENAI_API_KEY", "").strip()
         self.gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
-        self.claude_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-        self.grok_key = os.environ.get("XAI_API_KEY", "").strip()
+        self.groq_key = os.environ.get("GROQ_API_KEY", "").strip()
         self.nvidia_key = os.environ.get("NVIDIA_API_KEY", "").strip()
         self.openrouter_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
         self.models_called: list[str] = []
@@ -958,6 +967,7 @@ class AICouncil:
         headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json",
+            "User-Agent": "JagnorAICouncil/2.0",
             **(extra_headers or {}),
         }
         payload = {
@@ -966,7 +976,7 @@ class AICouncil:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.3,
+            "temperature": 0.35,
         }
         req = urllib.request.Request(
             url,
@@ -988,7 +998,7 @@ class AICouncil:
             payload = {
                 "systemInstruction": {"parts": [{"text": system_prompt}]},
                 "contents": [{"parts": [{"text": user_prompt}]}],
-                "generationConfig": {"temperature": 0.3},
+                "generationConfig": {"temperature": 0.35},
             }
             req = urllib.request.Request(
                 url,
@@ -1007,42 +1017,25 @@ class AICouncil:
                 continue
         raise RuntimeError("All native Gemini model endpoints failed.")
 
-    def _call_claude_native(self, system_prompt: str, user_prompt: str) -> str:
-        primary_model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-20250514")
-        for model in dict.fromkeys([primary_model, "claude-3-7-sonnet-latest", "claude-3-5-sonnet-latest"]):
-            payload = {
-                "model": model,
-                "max_tokens": 1024,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-                "temperature": 0.3,
-            }
-            req = urllib.request.Request(
-                "https://api.anthropic.com/v1/messages",
-                data=json.dumps(payload).encode("utf-8"),
-                headers={
-                    "x-api-key": self.claude_key,
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json",
-                },
-                method="POST",
-            )
+    def _call_groq_native(self, system_prompt: str, user_prompt: str) -> str:
+        """Calls Groq's ultra-fast free-tier OpenAI-compatible endpoint (`GROQ_API_KEY`)."""
+        primary_model = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+        for g_model in dict.fromkeys([primary_model, "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]):
             try:
-                raw, _ = urlopen_with_retry(req, timeout=45, max_attempts=2)
-                data = json.loads(raw.decode("utf-8"))
-                content = data.get("content") or []
-                if content:
-                    return str(content[0].get("text") or "").strip()
+                return self._call_openai_compatible(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    self.groq_key,
+                    g_model,
+                    system_prompt,
+                    user_prompt,
+                )
             except Exception as exc:
-                log.debug("Claude model %s attempt failed: %s", model, exc)
+                log.debug("Groq model %s attempt failed: %s", g_model, exc)
                 continue
-        raise RuntimeError("All native Claude model endpoints failed.")
+        raise RuntimeError("All native Groq model endpoints failed.")
 
     def _call_nvidia_native(self, system_prompt: str, user_prompt: str) -> str:
-        """
-        Calls NVIDIA NIM OpenAI-compatible endpoint (`https://integrate.api.nvidia.com/v1/chat/completions`)
-        using `NVIDIA_API_KEY` across 2026 Nemotron models.
-        """
+        """Calls NVIDIA NIM OpenAI-compatible endpoint (`NVIDIA_API_KEY`)."""
         nv_url = os.environ.get("NVIDIA_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions").strip()
         primary_model = os.environ.get("NVIDIA_MODEL", "nvidia/nemotron-3-super-120b-a12b")
         fallback_models = [
@@ -1067,12 +1060,10 @@ class AICouncil:
 
     def invoke_stage(self, provider: str, system_prompt: str, user_prompt: str) -> str | None:
         openrouter_candidates = {
-            "gemini": ["google/gemini-2.5-flash", "openrouter/auto"],
-            "claude": ["anthropic/claude-3.7-sonnet", "openrouter/auto"],
-            "grok": ["x-ai/grok-3-mini", "openrouter/auto"],
-            "chatgpt": ["openai/gpt-4.1-mini", "openai/gpt-4o-mini", "openrouter/auto"],
-            "nvidia": ["nvidia/llama-3.1-nemotron-70b-instruct", "openrouter/auto"],
-            "openrouter": [os.environ.get("OPENROUTER_JUDGE_MODEL", "openrouter/auto"), "openai/gpt-4o-mini"],
+            "gemini": ["google/gemini-2.5-flash", "openrouter/free", "openrouter/auto"],
+            "groq": ["meta-llama/llama-3.3-70b-instruct:free", "openrouter/free", "openrouter/auto"],
+            "nvidia": ["nvidia/llama-3.1-nemotron-70b-instruct", "openrouter/free", "openrouter/auto"],
+            "openrouter": [os.environ.get("OPENROUTER_JUDGE_MODEL", "openrouter/free"), "openrouter/auto"],
         }
 
         try:
@@ -1080,34 +1071,10 @@ class AICouncil:
                 res = self._call_gemini_native(system_prompt, user_prompt)
                 self.models_called.append("gemini-native")
                 return res
-            if provider == "claude" and self.claude_key:
-                res = self._call_claude_native(system_prompt, user_prompt)
-                self.models_called.append("claude-native")
+            if provider == "groq" and self.groq_key:
+                res = self._call_groq_native(system_prompt, user_prompt)
+                self.models_called.append("groq-native")
                 return res
-            if provider == "grok" and self.grok_key:
-                res = self._call_openai_compatible(
-                    "https://api.x.ai/v1/chat/completions",
-                    self.grok_key,
-                    os.environ.get("XAI_MODEL", "grok-3-mini"),
-                    system_prompt,
-                    user_prompt,
-                )
-                self.models_called.append("grok-native")
-                return res
-            if provider == "chatgpt" and self.openai_key:
-                for oa_model in dict.fromkeys([os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"), "gpt-4o-mini"]):
-                    try:
-                        res = self._call_openai_compatible(
-                            "https://api.openai.com/v1/chat/completions",
-                            self.openai_key,
-                            oa_model,
-                            system_prompt,
-                            user_prompt,
-                        )
-                        self.models_called.append(f"chatgpt-native:{oa_model}")
-                        return res
-                    except Exception:
-                        continue
             if provider == "nvidia" and self.nvidia_key:
                 res = self._call_nvidia_native(system_prompt, user_prompt)
                 self.models_called.append("nvidia-nim-native")
@@ -1116,7 +1083,7 @@ class AICouncil:
             log.warning("Native [%s] API failed (%s); falling back to OpenRouter if configured...", provider, native_exc)
 
         if self.openrouter_key:
-            for or_model in openrouter_candidates.get(provider, ["openrouter/auto"]):
+            for or_model in dict.fromkeys(openrouter_candidates.get(provider, ["openrouter/free", "openrouter/auto"])):
                 try:
                     res = self._call_openai_compatible(
                         "https://openrouter.ai/api/v1/chat/completions",
@@ -1126,7 +1093,7 @@ class AICouncil:
                         user_prompt,
                         extra_headers={
                             "HTTP-Referer": "https://github.com/jagnor110-cell",
-                            "X-Title": "Jagnor AI Council",
+                            "X-Title": "Jagnor Free AI Council",
                         },
                     )
                     self.models_called.append(f"openrouter:{or_model}")
@@ -1198,6 +1165,7 @@ class AICouncil:
         brain: CompanyBrain,
         max_clips: int = 3,
     ) -> list[dict[str, Any]]:
+        """Runs the 4-Brain Free AI Council (Gemini -> Groq -> NVIDIA NIM -> OpenRouter) for clipping."""
         deterministic_windows = select_candidate_windows(segments, max_clips=max_clips)
         if not deterministic_windows:
             return []
@@ -1211,48 +1179,32 @@ class AICouncil:
         # Stage 1: GEMINI — Hook Window Discovery
         gemini_out = self.invoke_stage(
             "gemini",
-            "You are Stage 1 (Gemini Hook Analyst) in a 6-AI video clipping council. Pick high-retention 30-55s segment ranges by integer segment_id.",
+            "You are Stage 1 (Gemini Hook Analyst) in a 4-AI free video clipping council. Pick high-retention 30-55s segment ranges by integer segment_id.",
             f"Brand ICP:\n{brain.identity_icp}\n\nIndexed Transcript:\n{transcript_digest}\n\n"
             f"Propose up to {max_clips} clip windows as JSON: {{\"clips\": [{{\"start_segment_id\": int, \"end_segment_id\": int, \"reason\": str}}]}}",
         )
 
-        # Stage 2: CLAUDE — Narrative Pacing & Sentence-Boundary Refinement
-        claude_out = self.invoke_stage(
-            "claude",
-            "You are Stage 2 (Claude Narrative Director). Refine Gemini's candidate windows so every clip starts on a bold hook sentence and ends on a clean conclusion (30-55s total).",
-            f"Transcript:\n{transcript_digest}\n\nGemini Proposal:\n{gemini_out or json.dumps(deterministic_windows)}\n\n"
-            "Return refined JSON with start_segment_id, end_segment_id, and core_takeaway.",
+        # Stage 2: GROQ — Narrative Pacing, Viral 3-Second Hook & Instagram Caption
+        groq_out = self.invoke_stage(
+            "groq",
+            "You are Stage 2 (Groq Viral Director). Refine the windows to start on a bold hook sentence and end cleanly (30-55s), adding a <=6-word ALL-CAPS `hook_overlay` and an engaging `ig_caption` (no raw URLs).",
+            f"Brand Style:\n{brain.brand_style}\n\nTranscript:\n{transcript_digest}\n\nGemini Proposal:\n{gemini_out or json.dumps(deterministic_windows)}\n\n"
+            "Return JSON with start_segment_id, end_segment_id, hook_overlay, and ig_caption.",
         )
 
-        # Stage 3: GROK — Viral 3-Second Top-Banner Hook & Instagram Caption
-        grok_out = self.invoke_stage(
-            "grok",
-            "You are Stage 3 (Grok Viral Director). Write a punchy <=6-word ALL-CAPS 3-second hook overlay and an engaging Instagram Reels caption (no raw URLs; point to link in bio).",
-            f"Brand Style:\n{brain.brand_style}\n\nClaude Refined Clips:\n{claude_out or gemini_out or json.dumps(deterministic_windows)}\n\n"
-            "Return JSON adding `hook_overlay` (<=6 words) and `ig_caption` for each clip.",
-        )
-
-        # Stage 4: CHATGPT — High-CTR YouTube Shorts Title & SEO
-        chatgpt_out = self.invoke_stage(
-            "chatgpt",
-            "You are Stage 4 (ChatGPT YouTube Shorts Strategist). Add a high-CTR `yt_title` (<=60 chars including #Shorts) for each clip.",
-            f"Grok Draft:\n{grok_out or claude_out or gemini_out or json.dumps(deterministic_windows)}\n\n"
-            "Return JSON with `yt_title`, `hook_overlay`, `ig_caption`, `start_segment_id`, `end_segment_id`.",
-        )
-
-        # Stage 5: NVIDIA NIM — Multilingual Clarity, Hashtag & Engagement Polish
+        # Stage 3: NVIDIA NIM — YouTube Shorts High-CTR Title, SEO & Hashtags
         nvidia_out = self.invoke_stage(
             "nvidia",
-            "You are Stage 5 (NVIDIA Nemotron Engagement Polisher). Tighten the `hook_overlay`, `yt_title`, and `ig_caption` for maximum global retention and add 3 relevant hashtags to `ig_caption`.",
-            f"ChatGPT Draft:\n{chatgpt_out or grok_out or claude_out or gemini_out or json.dumps(deterministic_windows)}\n\n"
-            "Return JSON preserving `start_segment_id` and `end_segment_id` with polished `hook_overlay`, `yt_title`, and `ig_caption`.",
+            "You are Stage 3 (NVIDIA Nemotron Title & Retention Polisher). Add a high-CTR `yt_title` (<=60 chars including #Shorts), tighten `hook_overlay`, and add 3 niche hashtags to `ig_caption`.",
+            f"Groq Draft:\n{groq_out or gemini_out or json.dumps(deterministic_windows)}\n\n"
+            "Return JSON preserving start_segment_id and end_segment_id with polished hook_overlay, yt_title, and ig_caption.",
         )
 
-        # Stage 6: OPENROUTER — Chief Consensus Judge & Final Schema Validator
+        # Stage 4: OPENROUTER — Chief Consensus Judge & Final Schema Validator
         judge_out = self.invoke_stage(
             "openrouter",
-            "You are Stage 6 (OpenRouter Chief Consensus Judge). Merge all 5 AI models' work into final strict JSON.",
-            f"Gemini:\n{gemini_out}\nClaude:\n{claude_out}\nGrok:\n{grok_out}\nChatGPT:\n{chatgpt_out}\nNVIDIA NIM:\n{nvidia_out}\n\n"
+            "You are Stage 4 (OpenRouter Chief Consensus Judge). Merge all 3 AI drafts into final strict JSON.",
+            f"Gemini:\n{gemini_out}\nGroq:\n{groq_out}\nNVIDIA NIM:\n{nvidia_out}\n\n"
             "Output ONLY valid JSON: {\"clips\": [{\"start_segment_id\": int, \"end_segment_id\": int, "
             "\"hook_overlay\": str, \"yt_title\": str, \"ig_caption\": str, \"council_score\": float}]}",
         )
@@ -1260,9 +1212,7 @@ class AICouncil:
         parsed = (
             self._extract_json_dict(judge_out)
             or self._extract_json_dict(nvidia_out)
-            or self._extract_json_dict(chatgpt_out)
-            or self._extract_json_dict(grok_out)
-            or self._extract_json_dict(claude_out)
+            or self._extract_json_dict(groq_out)
             or self._extract_json_dict(gemini_out)
         )
 
@@ -1302,7 +1252,7 @@ class AICouncil:
                 })
 
         log.info(
-            "6-Model AI Council completed (%d models active: %s) -> selected %d clips.",
+            "4-Brain Free AI Council completed (%d models active: %s) -> selected %d clips.",
             len(self.models_called),
             ", ".join(self.models_called) if self.models_called else "deterministic-fallback",
             len(final_specs[:max_clips]),
@@ -1321,35 +1271,23 @@ class AICouncil:
             f"ICP:\n{brain.identity_icp}\nTopic: {title_or_topic}\nNotes: {raw_notes}",
         )
         s2 = self.invoke_stage(
-            "claude",
-            "You are Stage 2 (Claude Editorial Director). Refine the 3 takeaways into crisp <=12-word slide/video bullets.",
+            "groq",
+            "You are Stage 2 (Groq Viral Copywriter). Turn the 3 takeaways into crisp <=12-word bullets, add a 5-word hook badge, and write an engaging Instagram caption.",
             f"Gemini Draft:\n{s1 or raw_notes}",
         )
         s3 = self.invoke_stage(
-            "grok",
-            "You are Stage 3 (Grok Viral Copywriter). Add a 5-word hook badge and a high-converting Instagram caption.",
-            f"Claude Bullets:\n{s2 or raw_notes}",
+            "nvidia",
+            "You are Stage 3 (NVIDIA Nemotron SEO Polisher). Add a <=60-char YouTube Shorts title with #Shorts and 3 targeted hashtags to the Instagram caption.",
+            f"Groq Copy:\n{s2 or raw_notes}",
         )
         s4 = self.invoke_stage(
-            "chatgpt",
-            "You are Stage 4 (ChatGPT YouTube & Conversion Strategist). Add a <=60-char YouTube Shorts title with #Shorts.",
-            f"Grok Copy:\n{s3 or raw_notes}",
-        )
-        s5 = self.invoke_stage(
-            "nvidia",
-            "You are Stage 5 (NVIDIA Nemotron Engagement Polisher). Polish clarity and add 3 targeted hashtags to the Instagram caption.",
-            f"ChatGPT Copy:\n{s4 or raw_notes}",
-        )
-        s6 = self.invoke_stage(
             "openrouter",
-            "You are Stage 6 (OpenRouter Chief Consensus Judge). Output strict JSON only.",
-            f"Synthesize:\nGemini: {s1}\nClaude: {s2}\nGrok: {s3}\nChatGPT: {s4}\nNVIDIA NIM: {s5}\n"
+            "You are Stage 4 (OpenRouter Chief Consensus Judge). Output strict JSON only.",
+            f"Synthesize:\nGemini: {s1}\nGroq: {s2}\nNVIDIA NIM: {s3}\n"
             "Output ONLY JSON: {\"hook_badge\": str, \"points\": [str, str, str], \"yt_title\": str, \"ig_caption\": str}",
         )
         parsed = (
-            self._extract_json_dict(s6)
-            or self._extract_json_dict(s5)
-            or self._extract_json_dict(s4)
+            self._extract_json_dict(s4)
             or self._extract_json_dict(s3)
             or self._extract_json_dict(s2)
             or self._extract_json_dict(s1)
@@ -1357,12 +1295,12 @@ class AICouncil:
         )
         default_pts = [p.strip() for p in raw_notes.split(";") if p.strip()] or [
             "Centralize brand SOPs in a shared Company Brain.",
-            "Pass every video through the 6-Model AI Council.",
+            "Pass every video through the 4-Brain Free AI Council.",
             "Gate every public post behind human approval.",
         ]
         pts = parsed.get("points") if isinstance(parsed.get("points"), list) and len(parsed["points"]) >= 3 else default_pts
         return {
-            "hook_badge": str(parsed.get("hook_badge") or "6-AI COUNCIL VERIFIED")[:36].upper(),
+            "hook_badge": str(parsed.get("hook_badge") or "AI COUNCIL VERIFIED")[:36].upper(),
             "points": [str(p) for p in pts[:3]],
             "yt_title": str(parsed.get("yt_title") or f"{title_or_topic[:48]} #Shorts")[:100],
             "ig_caption": str(parsed.get("ig_caption") or f"{title_or_topic} — full breakdown via the link in bio."),
@@ -1373,47 +1311,41 @@ class AICouncil:
         self,
         topic: str,
         brain: CompanyBrain,
+        art_style: str = "dark_cinematic",
+        theme: str = "AI & Tech Automation",
     ) -> dict[str, Any]:
         """
-        Passes a topic/niche through all 6 AI brains to produce a 5-scene faceless Short script
-        with narration lines, vertical image prompts, hook banner, YouTube title, and IG caption.
+        Passes a topic, theme, and art_style through the 4-Brain Free AI Council to produce
+        a cohesive 5-scene motion-animated faceless Short script.
         """
+        style_desc = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
+
         s1 = self.invoke_stage(
             "gemini",
-            "You are Stage 1 (Gemini Viral Strategist). Outline a 5-scene 35-second faceless vertical video script on this topic.",
-            f"ICP:\n{brain.identity_icp}\nTopic: {topic}\nGive 5 short scenes with narration (12-16 words each) and cinematic visual prompts.",
+            "You are Stage 1 (Gemini Viral Strategist). Outline a 5-scene 35-second faceless vertical video script tailored to the requested theme and art style.",
+            f"Theme: {theme}\nArt Style: {art_style} ({style_desc})\nTopic: {topic}\n"
+            f"ICP:\n{brain.identity_icp}\n"
+            "Give 5 short scenes with narration (12-16 words each), a vivid visual_prompt matching the Art Style, and a 2-3 word stock_keywords phrase for each scene.",
         )
         s2 = self.invoke_stage(
-            "claude",
-            "You are Stage 2 (Claude Script Director). Tighten the 5 scenes so every narration sentence flows seamlessly and hooks in the first 3 seconds.",
-            f"Gemini Outline:\n{s1 or topic}",
+            "groq",
+            "You are Stage 2 (Groq Viral Script Director). Tighten all 5 scenes so the first 3 seconds hook hard, every narration sentence flows cleanly, and add a <=6-word ALL-CAPS `hook_overlay` + engaging `ig_caption`.",
+            f"Theme: {theme} | Art Style: {art_style}\nGemini Outline:\n{s1 or topic}",
         )
         s3 = self.invoke_stage(
-            "grok",
-            "You are Stage 3 (Grok Viral Director). Add a <=6-word ALL-CAPS `hook_overlay` and an engaging `ig_caption`.",
-            f"Claude Script:\n{s2 or topic}",
+            "nvidia",
+            "You are Stage 3 (NVIDIA Nemotron SEO & Retention Polisher). Add a <=60-char `yt_title` with #Shorts, polish visual_prompt consistency for the chosen Art Style, and add 3 niche hashtags to `ig_caption`.",
+            f"Art Style: {art_style} ({style_desc})\nGroq Draft:\n{s2 or topic}",
         )
         s4 = self.invoke_stage(
-            "chatgpt",
-            "You are Stage 4 (ChatGPT YouTube CTR Strategist). Add a <=60-char `yt_title` with #Shorts.",
-            f"Grok Draft:\n{s3 or topic}",
-        )
-        s5 = self.invoke_stage(
-            "nvidia",
-            "You are Stage 5 (NVIDIA Nemotron Engagement Polisher). Polish clarity and add 3 niche hashtags to `ig_caption`.",
-            f"ChatGPT Draft:\n{s4 or topic}",
-        )
-        s6 = self.invoke_stage(
             "openrouter",
-            "You are Stage 6 (OpenRouter Chief Consensus Judge). Output ONLY strict JSON.",
-            f"Merge all 5 drafts:\nGemini:{s1}\nClaude:{s2}\nGrok:{s3}\nChatGPT:{s4}\nNVIDIA:{s5}\n"
+            "You are Stage 4 (OpenRouter Chief Consensus Judge). Output ONLY strict JSON.",
+            f"Merge all 3 drafts:\nGemini:{s1}\nGroq:{s2}\nNVIDIA:{s3}\n"
             'Output ONLY valid JSON: {"hook_overlay": str, "yt_title": str, "ig_caption": str, '
-            '"scenes": [{"narration": str, "visual_prompt": str}]} (exactly 5 scenes).',
+            '"scenes": [{"narration": str, "visual_prompt": str, "stock_keywords": str}]} (exactly 5 scenes).',
         )
         parsed = (
-            self._extract_json_dict(s6)
-            or self._extract_json_dict(s5)
-            or self._extract_json_dict(s4)
+            self._extract_json_dict(s4)
             or self._extract_json_dict(s3)
             or self._extract_json_dict(s2)
             or self._extract_json_dict(s1)
@@ -1426,38 +1358,204 @@ class AICouncil:
                 if isinstance(sc, dict) and sc.get("narration"):
                     scenes.append({
                         "narration": str(sc["narration"]).strip(),
-                        "visual_prompt": str(sc.get("visual_prompt") or f"cinematic futuristic dark studio {topic}").strip(),
+                        "visual_prompt": str(sc.get("visual_prompt") or f"{topic}, {theme}").strip(),
+                        "stock_keywords": str(sc.get("stock_keywords") or f"{theme} {topic}")[:40].strip(),
                     })
 
         if len(scenes) < 3:
             scenes = [
                 {
-                    "narration": f"Most people still do {topic} manually while autonomous AI teams run it in seconds.",
-                    "visual_prompt": f"cinematic dark neon command center visualizing {topic}, ultra detailed 9:16 vertical",
+                    "narration": f"Most people still overlook how {topic} is reshaping {theme} right now.",
+                    "visual_prompt": f"dramatic opening scene representing {topic} in {theme}",
+                    "stock_keywords": f"{theme} futuristic",
                 },
                 {
-                    "narration": "Step one is building one central company brain so every agent shares the exact same rules.",
-                    "visual_prompt": "glowing holographic neural blueprint floating over dark obsidian desk, vertical 9:16",
+                    "narration": "The shift starts when one clear system replaces hours of repetitive manual work.",
+                    "visual_prompt": f"glowing command hub illustrating {topic} workflow",
+                    "stock_keywords": "technology workspace neon",
                 },
                 {
-                    "narration": "Step two connects six AI models in a council to write, refine, and verify every script.",
-                    "visual_prompt": "six luminous futuristic glass orbs connected by blue light beams in dark studio, vertical 9:16",
+                    "narration": "Four specialized AI models collaborate in sequence to write, sharpen, and verify every angle.",
+                    "visual_prompt": f"four luminous energy nodes connecting into a single beam, {theme}",
+                    "stock_keywords": "abstract digital network",
                 },
                 {
-                    "narration": "Step three locks automated quality checks and human approval gates before anything goes live.",
-                    "visual_prompt": "cybernetic golden shield protecting sleek digital timeline dashboard, vertical 9:16",
+                    "narration": "Every visual is locked to one cohesive aesthetic so viewers recognize your brand instantly.",
+                    "visual_prompt": f"sleek futuristic studio screen displaying bold art frames, {theme}",
+                    "stock_keywords": "creative studio lighting",
                 },
                 {
-                    "narration": "Follow for the full open-source blueprint and check the link in bio to deploy yours today.",
-                    "visual_prompt": "minimalist dark luxury tech rocket launch glow, bold futuristic aesthetic, vertical 9:16",
+                    "narration": "Build the engine once, review the output, and let consistency compound every single week.",
+                    "visual_prompt": f"rising golden horizon over futuristic cityscape symbolizing growth, {theme}",
+                    "stock_keywords": "city skyline sunset",
                 },
             ]
 
         return {
-            "hook_overlay": str(parsed.get("hook_overlay") or f"{topic[:32]}").upper(),
+            "hook_overlay": str(parsed.get("hook_overlay") or topic[:36]).upper()[:42],
             "yt_title": str(parsed.get("yt_title") or f"{topic[:48]} #Shorts")[:100],
-            "ig_caption": str(parsed.get("ig_caption") or f"{topic} — built 100% autonomously. Link in bio. #AI #Automation #Tech"),
-            "scenes": scenes[:5],
+            "ig_caption": str(parsed.get("ig_caption") or f"{topic} — built automatically with our free AI studio. Follow for more! #AI #Automation #Shorts"),
+            "scenes": scenes,
+            "art_style": art_style,
+            "theme": theme,
+            "council_models_used": list(self.models_called),
+        }
+
+
+
+    def run_motion_story_council(
+        self,
+        topic: str,
+        brain: CompanyBrain,
+        art_style: str = "dark_cinematic",
+        theme: str = "Universal Storytelling",
+        character_desc: str = "",
+        language_hint: str = "English",
+    ) -> dict[str, Any]:
+        """
+        4-Brain Free AI Council for `--engine motion_story`:
+        Generates a universal character sheet (colors, silhouette, prop, aura) plus
+        5 animated 2D motion-graphic scenes (`hero_intro`, `scale_comparison`,
+        `action_flight`, `source_quote`, `zoom_callout`) for ANY topic or theme.
+        """
+        char_hint = character_desc.strip() or f"An iconic, memorable protagonist suited to {topic} ({theme})"
+        s1 = self.invoke_stage(
+            "gemini",
+            "You are Stage 1 (Gemini Story Architect). Write a gripping 5-scene 45-second 2D animated story script with a universal character sheet.",
+            f"Topic: {topic}\nTheme: {theme}\nArt Style: {art_style}\nLanguage: {language_hint}\n"
+            f"Character Hint: {char_hint}\nICP:\n{brain.identity_icp}\n"
+            "Design 1 consistent character (name, primary_hex, accent_hex, skin_hex, aura_hex, archetype: hero/scholar/warrior/astronaut/mystic/founder) "
+            "and 5 scenes using scene_type in [hero_intro, scale_comparison, action_flight, source_quote, zoom_callout]. "
+            "Each scene needs narration (14-20 words), top_label (<=5 words), metric_value (number or short stat), metric_unit, and quote_text (for source_quote).",
+        )
+        s2 = self.invoke_stage(
+            "groq",
+            "You are Stage 2 (Groq Viral Storyteller). Sharpen the opening 3-second hook, ensure every scene builds tension and ends with a comment-triggering question, and add `hook_overlay` + `ig_caption`.",
+            f"Topic: {topic} | Theme: {theme} | Language: {language_hint}\nGemini Draft:\n{s1 or topic}",
+        )
+        s3 = self.invoke_stage(
+            "nvidia",
+            "You are Stage 3 (NVIDIA Nemotron Polish & SEO). Add a <=60-char `yt_title` with #Shorts, verify all hex colors are valid #RRGGBB, and add 3 hashtags to `ig_caption`.",
+            f"Groq Draft:\n{s2 or topic}",
+        )
+        s4 = self.invoke_stage(
+            "openrouter",
+            "You are Stage 4 (OpenRouter Chief Consensus Judge). Output ONLY strict valid JSON.",
+            f"Merge all 3 drafts:\nGemini:{s1}\nGroq:{s2}\nNVIDIA:{s3}\n"
+            'Output ONLY valid JSON: {"hook_overlay": str, "yt_title": str, "ig_caption": str, '
+            '"character": {"name": str, "archetype": str, "primary_hex": str, "accent_hex": str, "skin_hex": str, "aura_hex": str, "backdrop_mood": str}, '
+            '"scenes": [{"scene_type": str, "narration": str, "top_label": str, "metric_value": float, "metric_unit": str, "quote_title": str, "quote_text": str, "callout_label": str}]} '
+            "(exactly 5 scenes).",
+        )
+        parsed = (
+            self._extract_json_dict(s4)
+            or self._extract_json_dict(s3)
+            or self._extract_json_dict(s2)
+            or self._extract_json_dict(s1)
+            or {}
+        )
+
+        def _safe_hex(val: Any, default: str) -> str:
+            s = str(val or "").strip()
+            return s if re.fullmatch(r"#[0-9a-fA-F]{6}", s) else default
+
+        raw_char = parsed.get("character") if isinstance(parsed.get("character"), dict) else {}
+        character = {
+            "name": str(raw_char.get("name") or "The Protagonist")[:32],
+            "archetype": str(raw_char.get("archetype") or "hero").lower(),
+            "primary_hex": _safe_hex(raw_char.get("primary_hex"), "#D94A38"),
+            "accent_hex": _safe_hex(raw_char.get("accent_hex"), "#F5C451"),
+            "skin_hex": _safe_hex(raw_char.get("skin_hex"), "#C68642"),
+            "aura_hex": _safe_hex(raw_char.get("aura_hex"), "#38BDF8"),
+            "backdrop_mood": str(raw_char.get("backdrop_mood") or "night_ocean").lower(),
+        }
+
+        default_types = ["hero_intro", "scale_comparison", "action_flight", "source_quote", "zoom_callout"]
+        raw_scenes = parsed.get("scenes")
+        scenes: list[dict[str, Any]] = []
+        if isinstance(raw_scenes, list):
+            for idx, sc in enumerate(raw_scenes[:5]):
+                if isinstance(sc, dict) and sc.get("narration"):
+                    st = str(sc.get("scene_type") or default_types[idx % 5]).lower()
+                    if st not in set(default_types):
+                        st = default_types[idx % 5]
+                    try:
+                        m_val = float(sc.get("metric_value") or 100)
+                    except Exception:
+                        m_val = 100.0
+                    scenes.append({
+                        "scene_type": st,
+                        "narration": str(sc["narration"]).strip(),
+                        "top_label": str(sc.get("top_label") or topic[:30]).strip().upper()[:38],
+                        "metric_value": m_val,
+                        "metric_unit": str(sc.get("metric_unit") or "X").strip().upper()[:14],
+                        "quote_title": str(sc.get("quote_title") or theme.upper()).strip()[:40],
+                        "quote_text": str(sc.get("quote_text") or sc["narration"]).strip()[:200],
+                        "callout_label": str(sc.get("callout_label") or f"{int(m_val)} {sc.get('metric_unit') or ''}").strip().upper()[:28],
+                    })
+
+        if len(scenes) < 3:
+            scenes = [
+                {
+                    "scene_type": "hero_intro",
+                    "narration": f"Most people never realize the true scale behind {topic} until you see the numbers side by side.",
+                    "top_label": topic[:32].upper(),
+                    "metric_value": 3.0,
+                    "metric_unit": "X SCALE",
+                    "quote_title": theme.upper(),
+                    "quote_text": "",
+                    "callout_label": "ORIGIN POINT",
+                },
+                {
+                    "scene_type": "scale_comparison",
+                    "narration": "Step by step, the scale climbs past every ordinary benchmark we picture in our heads.",
+                    "top_label": "THE REAL SCALE",
+                    "metric_value": 1000.0,
+                    "metric_unit": "UNITS",
+                    "quote_title": theme.upper(),
+                    "quote_text": "",
+                    "callout_label": "1000 UNITS",
+                },
+                {
+                    "scene_type": "action_flight",
+                    "narration": "At the turning point of the story, pure speed and precision outmaneuver brute force in a single blink.",
+                    "top_label": "THE TURNING POINT",
+                    "metric_value": 90.0,
+                    "metric_unit": "SPEED",
+                    "quote_title": theme.upper(),
+                    "quote_text": "",
+                    "callout_label": "CRITICAL MOVE",
+                },
+                {
+                    "scene_type": "source_quote",
+                    "narration": f"The original record of {topic} spells out every detail clearly, leaving nothing to guesswork.",
+                    "top_label": "THE RECORD",
+                    "metric_value": 1.0,
+                    "metric_unit": "SOURCE",
+                    "quote_title": f"{theme.upper()} ARCHIVE",
+                    "quote_text": f"In the classic account of {topic}, scale and wisdom work together to overcome an impossible obstacle.",
+                    "callout_label": "VERIFIED RECORD",
+                },
+                {
+                    "scene_type": "zoom_callout",
+                    "narration": f"Did you know this hidden detail about {topic}? Tell me your take in the comments below.",
+                    "top_label": "WHAT DO YOU THINK?",
+                    "metric_value": 100.0,
+                    "metric_unit": "% REAL",
+                    "quote_title": theme.upper(),
+                    "quote_text": "",
+                    "callout_label": "COMMENT BELOW",
+                },
+            ]
+
+        return {
+            "hook_overlay": str(parsed.get("hook_overlay") or topic[:36]).upper()[:42],
+            "yt_title": str(parsed.get("yt_title") or f"{topic[:48]} #Shorts")[:100],
+            "ig_caption": str(parsed.get("ig_caption") or f"{topic} — animated story breakdown. Tell us your thoughts in the comments! #Story #Animation #Shorts"),
+            "character": character,
+            "scenes": scenes,
+            "art_style": art_style,
+            "theme": theme,
             "council_models_used": list(self.models_called),
         }
 
@@ -2737,7 +2835,7 @@ def run_raw_video_drop_engine(
     """
     Scans `inbox_dir` (e.g. `inbox_videos/`) for the next unprocessed MP4/MOV exported from
     Canva (Fabbler.ai), Digital Maker AI, or Qwen/Wan, auto-transcribes (if audio has speech),
-    runs the 6-Model AI Council for hook/title/caption, formats to 1080x1920 9:16 with +faststart,
+    runs the 4-Brain Free AI Council for hook/title/caption, formats to 1080x1920 9:16 with +faststart,
     marks `contains_synthetic_media=True`, and queues it for YouTube Shorts + Instagram Reels.
     """
     inbox_dir.mkdir(parents=True, exist_ok=True)
@@ -2796,7 +2894,7 @@ def run_raw_video_drop_engine(
                 working_src, job_dir, device=actual_device, model_name=model_name, compute_type=compute_type
             )
         except Exception as exc:
-            log.info("Skipping speech transcription on dropped video (%s); using 6-Model AI Council hook banner only.", exc)
+            log.info("Skipping speech transcription on dropped video (%s); using 4-Brain Free AI Council hook banner only.", exc)
 
     council = AICouncil()
     if segments:
@@ -2880,26 +2978,102 @@ def _trim_words(text: str, max_chars: int = 58) -> str:
     return (cut or clean[:max_chars]) + "..."
 
 
-def _fetch_free_ai_scene_image(visual_prompt: str, out_img: Path, fallback_headline: str, scene_num: int) -> Path:
-    """
-    Fetches a free 1080x1920 AI-generated vertical image via Pollinations.ai with
-    rate-limit pacing, 4-attempt retry/backoff, and automatic bottom-edge watermark crop.
-    Falls back to a cleanly word-wrapped branded editorial card if offline.
-    """
-    if scene_num > 1:
-        time.sleep(4.5)  # Pace requests to avoid Pollinations.ai burst rate limits
+def _fetch_pexels_portrait_image(keywords: str, out_img: Path, scene_num: int) -> bool:
+    """Fetches a free, watermark-free 9:16 portrait HD photo from Pexels API (`PEXELS_API_KEY`)."""
+    pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
+    if not pexels_key:
+        return False
+    clean_q = re.sub(r"[^a-zA-Z0-9\s]+", " ", keywords).strip() or "futuristic dark technology"
+    search_url = (
+        "https://api.pexels.com/v1/search?"
+        + urllib.parse.urlencode({"query": clean_q[:60], "orientation": "portrait", "per_page": 8})
+    )
+    try:
+        req = urllib.request.Request(
+            search_url,
+            headers={"Authorization": pexels_key, "User-Agent": "JagnorAIStudio/2.0"},
+        )
+        raw, _ = urlopen_with_retry(req, timeout=25, max_attempts=2)
+        data = json.loads(raw.decode("utf-8"))
+        photos = data.get("photos") or []
+        if not photos:
+            return False
+        chosen = photos[(scene_num - 1) % len(photos)]
+        src_obj = chosen.get("src") or {}
+        img_url = src_obj.get("portrait") or src_obj.get("large2x") or src_obj.get("large")
+        if not img_url:
+            return False
+        img_req = urllib.request.Request(img_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(img_req, timeout=30) as resp:
+            img_bytes = resp.read()
+        if len(img_bytes) < 10000:
+            return False
+        tmp_jpg = out_img.with_suffix(".pexels.jpg")
+        tmp_jpg.write_bytes(img_bytes)
+        with Image.open(tmp_jpg) as im:
+            rgb = im.convert("RGB")
+            w, h = rgb.size
+            target_ratio = 9.0 / 16.0
+            cur_ratio = w / float(max(h, 1))
+            if cur_ratio > target_ratio:
+                new_w = int(h * target_ratio)
+                x0 = max(0, (w - new_w) // 2)
+                rgb = rgb.crop((x0, 0, x0 + new_w, h))
+            else:
+                new_h = int(w / target_ratio)
+                y0 = max(0, (h - new_h) // 2)
+                rgb = rgb.crop((0, y0, w, y0 + new_h))
+            rgb.resize((1080, 1920), Image.Resampling.LANCZOS).save(out_img, format="PNG")
+        tmp_jpg.unlink(missing_ok=True)
+        log.info("Scene %d visual loaded from Pexels HD (%s).", scene_num, clean_q[:30])
+        return True
+    except Exception as exc:
+        log.info("Scene %d Pexels API unavailable (%s).", scene_num, exc)
+        return False
 
-    encoded = urllib.parse.quote(f"{visual_prompt}, vertical 9:16 cinematic lighting, photorealistic, no text")
+
+def _fetch_free_ai_scene_image(
+    visual_prompt: str,
+    out_img: Path,
+    fallback_headline: str,
+    scene_num: int,
+    art_style: str = "dark_cinematic",
+    stock_keywords: str = "",
+) -> Path:
+    """
+    3-Layer Free Visual Chain:
+      1) Pollinations.ai (`POLLINATIONS_API_KEY` on gen.pollinations.ai, or 1-shot legacy check; stops immediately on HTTP 401/402)
+      2) Pexels HD Portrait Photos (`PEXELS_API_KEY` — 100% free, zero watermarks)
+      3) Cleanly word-wrapped branded editorial card
+    """
+    style_suffix = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
+    full_prompt = f"{visual_prompt}, {style_suffix}, vertical 9:16 composition"
+    encoded = urllib.parse.quote(full_prompt)
+    poll_key = os.environ.get("POLLINATIONS_API_KEY", "").strip()
+
+    if scene_num > 1 and poll_key:
+        time.sleep(3.0)
+
+    max_attempts = 3 if poll_key else 1
     last_exc: Exception | None = None
 
-    for attempt in range(1, 5):
+    for attempt in range(1, max_attempts + 1):
         seed = (scene_num * 137) + (attempt * 31)
-        url = (
-            f"https://image.pollinations.ai/prompt/{encoded}"
-            f"?width=1080&height=1920&model=flux&nologo=true&seed={seed}"
-        )
+        if poll_key:
+            url = (
+                f"https://gen.pollinations.ai/image/{encoded}"
+                f"?width=1080&height=1920&model=flux&nologo=true&seed={seed}"
+            )
+            headers = {"Authorization": f"Bearer {poll_key}", "User-Agent": "Mozilla/5.0"}
+        else:
+            url = (
+                f"https://image.pollinations.ai/prompt/{encoded}"
+                f"?width=1080&height=1920&nologo=true&seed={seed}"
+            )
+            headers = {"User-Agent": "Mozilla/5.0"}
+
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=45) as resp:
                 raw = resp.read()
             if len(raw) > 10000:
@@ -2907,49 +3081,93 @@ def _fetch_free_ai_scene_image(visual_prompt: str, out_img: Path, fallback_headl
                 tmp_jpg.write_bytes(raw)
                 with Image.open(tmp_jpg) as im:
                     rgb = im.convert("RGB")
-                    # Crop bottom 6% to cleanly eliminate any bottom-corner generator badge
                     w, h = rgb.size
                     cropped = rgb.crop((0, 0, w, int(h * 0.94)))
                     cropped.resize((1080, 1920), Image.Resampling.LANCZOS).save(out_img, format="PNG")
                 tmp_jpg.unlink(missing_ok=True)
+                log.info("Scene %d visual generated via Pollinations (%s).", scene_num, art_style)
                 return out_img
+        except urllib.error.HTTPError as exc:
+            last_exc = exc
+            if exc.code in {401, 402, 403}:
+                log.info("Scene %d Pollinations returned HTTP %d; skipping retries and checking Pexels fallback.", scene_num, exc.code)
+                break
+            if attempt < max_attempts:
+                time.sleep(4.0 * attempt)
         except Exception as exc:
             last_exc = exc
             if "Temporary failure in name resolution" in str(exc) or "nodename nor servname" in str(exc):
-                break  # Offline environment; skip retries immediately
-            if attempt < 4:
-                sleep_s = 5.0 * attempt
-                log.info("Scene %d image attempt %d/4 failed (%s); retrying in %.0fs...", scene_num, attempt, exc, sleep_s)
-                time.sleep(sleep_s)
+                break
+            if attempt < max_attempts:
+                time.sleep(4.0 * attempt)
 
-    log.info("Scene %d image API unavailable (%s); rendering branded fallback visual.", scene_num, last_exc)
+    if _fetch_pexels_portrait_image(stock_keywords or visual_prompt, out_img, scene_num):
+        return out_img
+
+    log.info("Scene %d image APIs unavailable (%s); rendering branded fallback visual.", scene_num, last_exc)
     _render_brand_slide_png(
         out_img,
         width=1080,
         height=1920,
-        badge=f"SCENE 0{scene_num} • AI ENGINE",
+        badge=f"SCENE 0{scene_num} • {art_style.replace('_', ' ').upper()}",
         headline=_trim_words(fallback_headline, 58).upper(),
-        subline="6-Model AI Council • Automated Short",
-        footer="JAGNOR AI FACELESS STUDIO",
+        subline="4-Brain Free AI Council • Motion Short",
+        footer="JAGNOR AI STUDIO",
     )
     return out_img
 
 
-def _synthesize_scene_voiceover(text: str, out_wav: Path, voice: str = "en-US-AndrewNeural") -> float:
+VOICE_PRESETS: dict[str, tuple[str, str, str]] = {
+    # preset_name: (edge_tts_voice, rate, pitch)
+    "deep_male": ("en-US-ChristopherNeural", "-6%", "-14Hz"),
+    "serious_male": ("en-GB-RyanNeural", "-4%", "-6Hz"),
+    "mysterious_male": ("en-US-SteffanNeural", "-12%", "-10Hz"),
+    "happy_male": ("en-US-BrianNeural", "+8%", "+4Hz"),
+    "indian_storyteller_male": ("en-IN-PrabhatNeural", "-3%", "-4Hz"),
+    "deep_female": ("en-US-AriaNeural", "-6%", "-10Hz"),
+    "serious_female": ("en-GB-SoniaNeural", "-4%", "-4Hz"),
+    "mysterious_female": ("en-US-EmmaNeural", "-11%", "-8Hz"),
+    "happy_female": ("en-US-JennyNeural", "+8%", "+6Hz"),
+    "malayalam_mysterious_male": ("ml-IN-MidhunNeural", "-8%", "-6Hz"),
+    "malayalam_female": ("ml-IN-SobhanaNeural", "-4%", "-2Hz"),
+    "hindi_serious_male": ("hi-IN-MadhurNeural", "-5%", "-6Hz"),
+}
+
+
+def _resolve_voice_preset(voice_or_preset: str) -> tuple[str, str, str]:
+    key = (voice_or_preset or "").strip()
+    if key in VOICE_PRESETS:
+        return VOICE_PRESETS[key]
+    return (key or "en-US-ChristopherNeural", "+0%", "+0Hz")
+
+
+def _synthesize_scene_voiceover(text: str, out_wav: Path, voice: str = "deep_male") -> float:
     """
-    Uses free Microsoft `edge-tts` (with 3-attempt retry + fallback voice) to synthesize
-    natural voiceover WAV so transient websocket hiccups never leave a silent scene.
+    Uses free Microsoft `edge-tts` with mood presets (deep/serious/mysterious/happy
+    male & female voices via --rate and --pitch) and 3-attempt retry + fallback voice.
     Falls back to a timed silent WAV only if offline or `edge-tts` is missing.
     """
+    resolved_voice, rate, pitch = _resolve_voice_preset(voice)
+    text = " ".join(str(text or "").split()).strip() or "Discover the hidden story behind this moment."
     mp3_tmp = out_wav.with_suffix(".mp3")
     est_dur = max(3.2, min(9.5, len(text.split()) / 2.6))
-    voices_to_try = [voice, voice, "en-US-ChristopherNeural"]
+    voices_to_try = [resolved_voice, resolved_voice, "en-US-ChristopherNeural"]
     last_exc: Exception | None = None
 
     for attempt, active_voice in enumerate(voices_to_try, start=1):
         try:
             mp3_tmp.unlink(missing_ok=True)
-            run_cmd(["edge-tts", "--voice", active_voice, "--text", text, "--write-media", str(mp3_tmp)], timeout=45)
+            run_cmd(
+                [
+                    "edge-tts",
+                    f"--voice={active_voice}",
+                    f"--rate={rate}",
+                    f"--pitch={pitch}",
+                    f"--text={text}",
+                    f"--write-media={mp3_tmp}",
+                ],
+                timeout=45,
+            )
             if not mp3_tmp.exists() or mp3_tmp.stat().st_size < 1000:
                 raise RuntimeError("edge-tts produced empty audio file")
             run_cmd([
@@ -2988,10 +3206,12 @@ def run_ai_faceless_engine(
     brain: CompanyBrain,
     voice: str = "en-US-AndrewNeural",
     public_dir: Path | None = None,
+    art_style: str = "dark_cinematic",
+    theme: str = "AI & Tech Automation",
 ) -> dict[str, Any]:
     """
     100% Hands-Free AI Faceless Short Generator:
-    1) 6-Model AI Council writes a 5-scene script & visual prompts.
+    1) 4-Brain Free AI Council writes a 5-scene script & visual prompts.
     2) Free `edge-tts` voices each scene (with automatic fallback).
     3) Fetches 9:16 AI scene visuals (or branded fallback cards) and applies smooth Ken Burns zoompan.
     4) Burns 3.5s HookBanner + word-by-word gold karaoke `.ass` captions and verifies `moov` +faststart.
@@ -3005,7 +3225,7 @@ def run_ai_faceless_engine(
     scene_dir.mkdir(parents=True, exist_ok=True)
 
     council = AICouncil()
-    script_pkg = council.run_6_brain_faceless_script(topic, brain)
+    script_pkg = council.run_6_brain_faceless_script(topic, brain, art_style=art_style, theme=theme)
     scenes = script_pkg["scenes"]
 
     scene_mp4s: list[Path] = []
@@ -3019,19 +3239,36 @@ def run_ai_faceless_engine(
         wav_p = scene_dir / f"scene_{idx:02d}.wav"
         clip_p = scene_dir / f"scene_{idx:02d}.mp4"
 
-        _fetch_free_ai_scene_image(vis_prompt, img_p, fallback_headline=narration, scene_num=idx)
+        stock_kw = sc.get("stock_keywords", f"{theme} {topic}")
+        _fetch_free_ai_scene_image(
+            vis_prompt,
+            img_p,
+            fallback_headline=narration,
+            scene_num=idx,
+            art_style=art_style,
+            stock_keywords=stock_kw,
+        )
         dur = _synthesize_scene_voiceover(narration, wav_p, voice=voice)
         frames = max(60, int(round(dur * 30)))
 
-        # Smooth Ken Burns zoom-in at 30fps on 1080x1920
+        # Alternating dynamic camera motion per scene (zoom-in, pan-right, zoom-out, pan-left, punch-in)
+        motion_mode = (idx - 1) % 5
+        if motion_mode == 0:
+            zp_expr = f"zoompan=z='min(zoom+0.0016,1.18)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30"
+        elif motion_mode == 1:
+            zp_expr = f"zoompan=z='1.12':d={frames}:x='(iw-iw/zoom)*on/{frames}':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30"
+        elif motion_mode == 2:
+            zp_expr = f"zoompan=z='max(1.18-on*0.0012,1.0)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30"
+        elif motion_mode == 3:
+            zp_expr = f"zoompan=z='1.12':d={frames}:x='(iw-iw/zoom)*(1-on/{frames})':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30"
+        else:
+            zp_expr = f"zoompan=z='min(zoom+0.0018,1.20)':d={frames}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30"
+
         run_cmd([
             "ffmpeg", "-y",
             "-loop", "1", "-t", f"{dur:.3f}", "-i", str(img_p),
             "-i", str(wav_p),
-            "-vf", (
-                f"scale=1080:1920,zoompan=z='min(zoom+0.0012,1.15)':d={frames}:"
-                f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920:fps=30,format=yuv420p"
-            ),
+            "-vf", f"scale=1080:1920,{zp_expr},format=yuv420p",
             "-c:v", "libx264", "-preset", "fast", "-crf", "20", "-pix_fmt", "yuv420p",
             "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
             "-shortest",
@@ -3130,13 +3367,588 @@ def run_ai_faceless_engine(
     return result
 
 
+
 # ============================================================================
-# 9. UNIFIED CLI ENTRYPOINT (TREND SCOUT + 6-LLM COUNCIL + SOCIAL PUBLISHER)
+# 8D. ENGINE G: UNIVERSAL 2D ANIMATED STORY & CHARACTER ENGINE (`--engine motion_story`)
 # ============================================================================
+
+def _hex_to_rgb(hex_str: str, default: tuple[int, int, int] = (217, 74, 56)) -> tuple[int, int, int]:
+    s = hex_str.strip().lstrip("#")
+    if len(s) == 6:
+        try:
+            return (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
+        except Exception:
+            pass
+    return default
+
+
+def _build_gradient_backdrop(width: int, height: int, mood: str, scene_idx: int) -> Image.Image:
+    """Pre-renders a rich vertical atmospheric sky/horizon gradient once per scene."""
+    palettes = [
+        ((10, 18, 42), (24, 44, 84), (14, 24, 50)),    # Starry night ocean
+        ((46, 26, 58), (156, 86, 88), (224, 152, 92)), # Golden sunset horizon
+        ((12, 22, 46), (26, 62, 112), (48, 120, 186)), # Orbital space glow
+        ((28, 20, 42), (76, 42, 74), (168, 96, 84)),   # Dusk twilight
+        ((14, 24, 44), (30, 52, 90), (18, 30, 56)),    # Deep midnight finale
+    ]
+    if "sunset" in mood or "warm" in mood:
+        top_c, mid_c, bot_c = palettes[(scene_idx + 1) % len(palettes)]
+    elif "space" in mood or "cyber" in mood:
+        top_c, mid_c, bot_c = palettes[(scene_idx + 2) % len(palettes)]
+    else:
+        top_c, mid_c, bot_c = palettes[scene_idx % len(palettes)]
+
+    arr = np.zeros((height, width, 3), dtype=np.uint8)
+    split = int(height * 0.65)
+    for y in range(height):
+        if y < split:
+            t = y / float(max(split, 1))
+            c = [int(top_c[i] + (mid_c[i] - top_c[i]) * t) for i in range(3)]
+        else:
+            t = (y - split) / float(max(height - split, 1))
+            c = [int(mid_c[i] + (bot_c[i] - mid_c[i]) * t) for i in range(3)]
+        arr[y, :] = c
+    img = Image.fromarray(arr, mode="RGB")
+    draw = ImageDraw.Draw(img)
+
+    # Subtle twinkling starfield in upper sky
+    rng = random.Random(1000 + scene_idx * 77)
+    for _ in range(55):
+        sx = rng.randint(20, width - 20)
+        sy = rng.randint(40, int(height * 0.58))
+        sr = rng.choice([1, 1, 2, 2, 3])
+        alpha = rng.randint(155, 245)
+        draw.ellipse((sx - sr, sy - sr, sx + sr, sy + sr), fill=(alpha, alpha, min(255, alpha + 10)))
+
+    # Glowing moon / sun orb
+    orb_x = int(width * (0.78 if scene_idx % 2 == 0 else 0.24))
+    orb_y = int(height * 0.16)
+    draw.ellipse((orb_x - 42, orb_y - 42, orb_x + 42, orb_y + 42), fill=(252, 238, 198))
+    return img
+
+
+def _draw_universal_character(
+    draw: ImageDraw.ImageDraw,
+    cx: float,
+    base_y: float,
+    scale: float,
+    char: dict[str, str],
+    phase: float,
+    flying: bool = False,
+) -> None:
+    """
+    Universal 2D procedural vector character renderer (works for ANY theme or genre):
+    Supports hero, warrior, scholar, astronaut, mystic, and founder silhouettes with
+    smooth breathing bob, cape/aura pulse, and flying/action pose.
+    """
+    primary = _hex_to_rgb(char.get("primary_hex", "#D94A38"), (217, 74, 56))
+    accent = _hex_to_rgb(char.get("accent_hex", "#F5C451"), (245, 196, 81))
+    skin = _hex_to_rgb(char.get("skin_hex", "#C68642"), (198, 134, 66))
+    aura = _hex_to_rgb(char.get("aura_hex", "#38BDF8"), (56, 189, 248))
+    archetype = char.get("archetype", "hero")
+    outline = (245, 238, 224)
+
+    bob = math.sin(phase * 2.0 * math.pi) * (8.0 * scale)
+    y0 = base_y + bob
+    s = max(0.25, scale)
+
+    # Subtle glowing aura halo behind character
+    halo_r = int(120 * s * (1.0 + 0.05 * math.sin(phase * 4.0 * math.pi)))
+    draw.ellipse(
+        (cx - halo_r, y0 - 260 * s - halo_r * 0.6, cx + halo_r, y0 - 260 * s + halo_r * 0.6),
+        outline=aura,
+        width=max(2, int(3 * s)),
+    )
+
+    # Flowing cape / cloak / energy tail behind torso
+    sway = math.sin(phase * 2.0 * math.pi) * (24 * s)
+    if archetype in {"hero", "warrior", "mystic"}:
+        cape_pts = [
+            (cx - 58 * s, y0 - 300 * s),
+            (cx + 58 * s, y0 - 300 * s),
+            (cx + 92 * s + sway, y0 - 70 * s),
+            (cx - 92 * s + sway, y0 - 70 * s),
+        ]
+        draw.polygon(cape_pts, fill=tuple(max(0, c - 45) for c in primary), outline=accent)
+
+    # Legs / lower garment
+    leg_w = 34 * s
+    if flying:
+        draw.rounded_rectangle((cx - 48 * s, y0 - 150 * s, cx + 48 * s, y0 - 60 * s), radius=int(12 * s), fill=primary, outline=outline, width=max(1, int(2 * s)))
+    else:
+        draw.rounded_rectangle((cx - 46 * s, y0 - 155 * s, cx - 6 * s, y0), radius=int(10 * s), fill=skin, outline=outline, width=max(1, int(2 * s)))
+        draw.rounded_rectangle((cx + 6 * s, y0 - 155 * s, cx + 46 * s, y0), radius=int(10 * s), fill=skin, outline=outline, width=max(1, int(2 * s)))
+        # Lower tunic / robe / trousers
+        draw.rounded_rectangle((cx - 56 * s, y0 - 190 * s, cx + 56 * s, y0 - 70 * s), radius=int(14 * s), fill=primary, outline=outline, width=max(1, int(2 * s)))
+
+    # Torso
+    torso_fill = primary if archetype in {"astronaut", "founder", "scholar"} else skin
+    draw.rounded_rectangle(
+        (cx - 62 * s, y0 - 325 * s, cx + 62 * s, y0 - 180 * s),
+        radius=int(24 * s),
+        fill=torso_fill,
+        outline=outline,
+        width=max(2, int(3 * s)),
+    )
+    # Accent emblem / chest band / collar
+    draw.arc(
+        (cx - 42 * s, y0 - 320 * s, cx + 42 * s, y0 - 255 * s),
+        start=15, end=165, fill=accent, width=max(2, int(5 * s)),
+    )
+
+    # Arms with gentle animated sway
+    arm_sway = math.sin(phase * 2.0 * math.pi) * (10 * s)
+    if flying:
+        # Arms stretched forward/upward
+        draw.rounded_rectangle((cx - 120 * s, y0 - 340 * s + arm_sway, cx - 55 * s, y0 - 295 * s + arm_sway), radius=int(10 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
+        draw.rounded_rectangle((cx + 55 * s, y0 - 340 * s - arm_sway, cx + 120 * s, y0 - 295 * s - arm_sway), radius=int(10 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
+    else:
+        draw.rounded_rectangle((cx - 94 * s, y0 - 315 * s, cx - 60 * s, y0 - 165 * s + arm_sway), radius=int(12 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
+        draw.rounded_rectangle((cx + 60 * s, y0 - 315 * s, cx + 94 * s, y0 - 165 * s - arm_sway), radius=int(12 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
+        # Wrist cuffs
+        draw.rectangle((cx - 94 * s, y0 - 185 * s + arm_sway, cx - 60 * s, y0 - 175 * s + arm_sway), fill=accent)
+        draw.rectangle((cx + 60 * s, y0 - 185 * s - arm_sway, cx + 94 * s, y0 - 175 * s - arm_sway), fill=accent)
+
+    # Head
+    head_r = 46 * s
+    hy = y0 - 372 * s
+    draw.ellipse((cx - head_r, hy - head_r, cx + head_r, hy + head_r), fill=skin, outline=outline, width=max(2, int(3 * s)))
+    if archetype == "astronaut":
+        draw.ellipse((cx - head_r * 1.15, hy - head_r * 1.15, cx + head_r * 1.15, hy + head_r * 1.15), outline=(220, 240, 255), width=max(2, int(4 * s)))
+        draw.rounded_rectangle((cx - 30 * s, hy - 18 * s, cx + 30 * s, hy + 12 * s), radius=int(10 * s), fill=(28, 42, 68), outline=accent, width=max(1, int(2 * s)))
+    else:
+        # Expressive eyes + brow + crown/headband accent
+        eye_y = hy - 6 * s
+        draw.ellipse((cx - 22 * s, eye_y - 7 * s, cx - 8 * s, eye_y + 7 * s), fill=(255, 255, 255))
+        draw.ellipse((cx + 8 * s, eye_y - 7 * s, cx + 22 * s, eye_y + 7 * s), fill=(255, 255, 255))
+        draw.ellipse((cx - 18 * s, eye_y - 4 * s, cx - 12 * s, eye_y + 4 * s), fill=(20, 24, 34))
+        draw.ellipse((cx + 12 * s, eye_y - 4 * s, cx + 18 * s, eye_y + 4 * s), fill=(20, 24, 34))
+        draw.arc((cx - 16 * s, hy + 6 * s, cx + 16 * s, hy + 24 * s), start=10, end=170, fill=(55, 32, 22), width=max(2, int(3 * s)))
+        # Crown / headband / hair crest
+        draw.arc((cx - head_r * 0.9, hy - head_r * 0.9, cx + head_r * 0.9, hy - head_r * 0.1), start=190, end=350, fill=accent, width=max(2, int(6 * s)))
+
+
+def _load_font(size: int, bold: bool = False, text_sample: str = "") -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    has_malayalam = any("\u0d00" <= ch <= "\u0d7f" for ch in text_sample)
+    has_devanagari = any("\u0900" <= ch <= "\u097f" for ch in text_sample)
+    candidates: list[str] = []
+    if has_malayalam:
+        candidates.extend([
+            "/usr/share/fonts/truetype/noto/NotoSansMalayalam-Bold.ttf" if bold else "/usr/share/fonts/truetype/noto/NotoSansMalayalam-Regular.ttf",
+            "/usr/share/fonts/truetype/lohit-malayalam/Lohit-Malayalam.ttf",
+            "/usr/share/fonts/truetype/malayalam/Manjari-Bold.ttf",
+        ])
+    elif has_devanagari:
+        candidates.extend([
+            "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Bold.ttf" if bold else "/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf",
+            "/usr/share/fonts/truetype/lohit-devanagari/Lohit-Devanagari.ttf",
+        ])
+    candidates.extend(
+        [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+        ]
+        if bold
+        else [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        ]
+    )
+    for fp in candidates:
+        if os.path.exists(fp):
+            try:
+                return ImageFont.truetype(fp, size)
+            except Exception:
+                continue
+    return ImageFont.load_default()
+
+
+def _fit_font(
+    draw: ImageDraw.ImageDraw,
+    text: str,
+    max_width: int,
+    start_size: int = 56,
+    min_size: int = 24,
+    bold: bool = True,
+) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    """Auto-shrinks font size so wide headlines/stats never clip off the 1080px screen."""
+    for sz in range(start_size, min_size - 1, -4):
+        fnt = _load_font(sz, bold=bold, text_sample=text)
+        bbox = draw.textbbox((0, 0), text, font=fnt)
+        if (bbox[2] - bbox[0]) <= max_width:
+            return fnt
+    return _load_font(min_size, bold=bold, text_sample=text)
+
+
+def _render_motion_story_scene(
+    scene: dict[str, Any],
+    character: dict[str, str],
+    scene_idx: int,
+    dur: float,
+    wav_path: Path,
+    out_mp4: Path,
+    fps: int = 24,
+) -> None:
+    """
+    Streams 1080x1920 24fps procedural 2D vector animation frames directly into FFmpeg
+    (zero intermediate PNG bloat): rippling water, ticking counters, scale rulers,
+    flying universal character, parchment quote cards, and circular zoom callouts.
+    """
+    W, H = 1080, 1920
+    n_frames = max(48, int(round(dur * fps)))
+    scene_type = scene.get("scene_type", "hero_intro")
+    top_label = str(scene.get("top_label") or "").upper()
+    metric_val = float(scene.get("metric_value") or 100.0)
+    metric_unit = str(scene.get("metric_unit") or "").upper()
+    quote_title = str(scene.get("quote_title") or "RECORD")
+    quote_text = str(scene.get("quote_text") or scene.get("narration") or "")
+    callout_label = str(scene.get("callout_label") or "")
+
+    bg_base = _build_gradient_backdrop(W, H, character.get("backdrop_mood", "night_ocean"), scene_idx)
+    sample_all = f"{top_label} {quote_title} {quote_text} {callout_label}"
+    font_med = _load_font(38, bold=True, text_sample=sample_all)
+    font_body = _load_font(34, bold=False, text_sample=sample_all)
+    accent_rgb = _hex_to_rgb(character.get("accent_hex", "#F5C451"), (245, 196, 81))
+    aura_rgb = _hex_to_rgb(character.get("aura_hex", "#38BDF8"), (56, 189, 248))
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-f", "rawvideo", "-vcodec", "rawvideo", "-pix_fmt", "rgb24",
+        "-s", f"{W}x{H}", "-r", str(fps), "-i", "-",
+        "-i", str(wav_path),
+        "-c:v", "libx264", "-preset", "fast", "-crf", "21", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
+        "-shortest",
+        str(out_mp4),
+    ]
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    assert proc.stdin is not None
+
+    try:
+        for f_idx in range(n_frames):
+            t = f_idx / float(max(n_frames - 1, 1))
+            frame = bg_base.copy()
+            draw = ImageDraw.Draw(frame)
+
+            # Animated horizon water / ground lines (bottom 26% of frame)
+            water_y = int(H * 0.74)
+            draw.rectangle((0, water_y, W, H), fill=(12, 22, 46))
+            for wi in range(14):
+                wy = water_y + 18 + wi * 34
+                shift = int(math.sin(t * 2.0 * math.pi + wi * 0.7) * 45)
+                draw.line((80 + shift, wy, 360 + shift, wy), fill=(72, 102, 148), width=3)
+                draw.line((540 - shift, wy + 12, 960 - shift, wy + 12), fill=(60, 88, 134), width=2)
+
+            if scene_type == "hero_intro":
+                # Character rises smoothly from water with concentric ripple rings
+                char_scale = 0.85 + 0.35 * min(1.0, t * 1.4)
+                cx, base_y = W * 0.5, water_y + 40
+                for ri in range(3):
+                    rr = int((90 + ri * 48 + (t * 60)) % 220)
+                    draw.ellipse((cx - rr, base_y - 22, cx + rr, base_y + 22), outline=(190, 215, 245), width=3)
+                _draw_universal_character(draw, cx, base_y, char_scale, character, phase=t)
+                # Animated scale ruler lines (x1, x2, x3) appearing smoothly
+                if t > 0.35:
+                    ruler_t = min(1.0, (t - 0.35) / 0.45)
+                    ry_top = int(base_y - 540 * ruler_t)
+                    draw.line((130, base_y, 130, ry_top), fill=accent_rgb, width=4)
+                    for step_i, mult in enumerate(["×1", "×2", "×3"], start=1):
+                        sy = int(base_y - step_i * 170)
+                        if sy >= ry_top:
+                            draw.line((115, sy, W - 90, sy), fill=(140, 165, 200), width=2)
+                            draw.text((146, sy - 38), mult, font=font_med, fill=accent_rgb)
+
+            elif scene_type == "scale_comparison":
+                # Animated ticking number counter + growing bar + scaling character
+                cur_val = metric_val * min(1.0, t * 1.25)
+                val_str = f"{int(round(cur_val)):,} {metric_unit}".strip()
+                f_stat = _fit_font(draw, val_str, max_width=W - 140, start_size=76, min_size=34, bold=True)
+                sb = draw.textbbox((0, 0), val_str, font=f_stat)
+                draw.text(((W - (sb[2] - sb[0])) // 2, 232), val_str, font=f_stat, fill=accent_rgb)
+                # Mountain / benchmark silhouette on the right
+                m_pts = [(580, water_y + 20), (810, water_y - 360), (1040, water_y + 20)]
+                draw.polygon(m_pts, fill=(56, 68, 92), outline=(190, 205, 225))
+                snow_pts = [(746, water_y - 248), (810, water_y - 360), (874, water_y - 248), (810, water_y - 215)]
+                draw.polygon(snow_pts, fill=(235, 242, 250))
+                # Growing character on the left
+                grow_scale = 0.65 + 0.65 * min(1.0, t * 1.2)
+                _draw_universal_character(draw, 320, water_y + 20, grow_scale, character, phase=t)
+                # Vertical measurement bar beside character
+                bar_h = int(480 * min(1.0, t * 1.2))
+                draw.line((110, water_y + 20, 110, water_y + 20 - bar_h), fill=accent_rgb, width=6)
+
+            elif scene_type == "action_flight":
+                # Universal character glides dynamically across sky with glowing trail
+                fx = 160 + (W - 320) * t
+                fy = 620 + math.sin(t * 2.5 * math.pi) * 95
+                # Motion trail orbs
+                for ti in range(1, 7):
+                    tx = fx - ti * 38
+                    ty = fy + math.sin((t - ti * 0.03) * 2.5 * math.pi) * 24
+                    tr = max(4, 24 - ti * 3)
+                    draw.ellipse((tx - tr, ty - 220 - tr, tx + tr, ty - 220 + tr), fill=aura_rgb)
+                _draw_universal_character(draw, fx, fy, 0.72, character, phase=t * 1.5, flying=True)
+
+            elif scene_type == "source_quote":
+                # Subtle character silhouette behind a crisp animated parchment/editorial quote card
+                _draw_universal_character(draw, W * 0.5, water_y + 30, 0.95, character, phase=t)
+                card_scale = min(1.0, t * 3.0)
+                cy_off = int((1.0 - card_scale) * 80)
+                box = (86, 460 + cy_off, W - 86, 1080 + cy_off)
+                draw.rounded_rectangle(box, radius=24, fill=(238, 224, 194), outline=accent_rgb, width=6)
+                qt_str = f"|| {quote_title} ||"
+                f_qt = _fit_font(draw, qt_str, max_width=W - 260, start_size=38, min_size=22, bold=True)
+                qb = draw.textbbox((0, 0), qt_str, font=f_qt)
+                draw.text(((W - (qb[2] - qb[0])) // 2, 505 + cy_off), qt_str, font=f_qt, fill=(108, 72, 24))
+                draw.line((130, 568 + cy_off, W - 130, 568 + cy_off), fill=(170, 138, 86), width=3)
+                # Word-wrap quote body cleanly
+                words = quote_text.split()
+                q_lines: list[str] = []
+                cur_l = ""
+                for w in words:
+                    test_l = (cur_l + " " + w).strip()
+                    if len(test_l) > 36 and cur_l:
+                        q_lines.append(cur_l)
+                        cur_l = w
+                    else:
+                        cur_l = test_l
+                if cur_l:
+                    q_lines.append(cur_l)
+                for li, ql in enumerate(q_lines[:8]):
+                    draw.text((130, 600 + cy_off + li * 52), ql, font=font_body, fill=(32, 26, 20))
+
+            else:
+                # zoom_callout: Orbital Earth arc + character + popping circular magnifier callout
+                draw.ellipse((-260, water_y - 60, W + 260, H + 420), fill=(26, 72, 138), outline=(120, 200, 255), width=6)
+                _draw_universal_character(draw, W * 0.62, water_y + 10, 1.05, character, phase=t)
+                # Pop-in circular magnifier callout on the left
+                pop = min(1.0, t * 2.5)
+                cr = int(148 * pop)
+                ccx, ccy = 270, 620
+                if cr > 20:
+                    draw.line((ccx + cr * 0.7, ccy + cr * 0.7, int(W * 0.56), water_y - 10), fill=(240, 245, 255), width=4)
+                    draw.ellipse((ccx - cr, ccy - cr, ccx + cr, ccy + cr), fill=(20, 34, 62), outline=(245, 248, 255), width=6)
+                    # Mini icon / mountain inside magnifier
+                    draw.polygon([(ccx - cr * 0.55, ccy + cr * 0.45), (ccx, ccy - cr * 0.45), (ccx + cr * 0.55, ccy + cr * 0.45)], fill=(120, 140, 170))
+                    f_co = _fit_font(draw, callout_label, max_width=520, start_size=36, min_size=22, bold=True)
+                    cb = draw.textbbox((0, 0), callout_label, font=f_co)
+                    co_x = max(48, min(W - 48 - (cb[2] - cb[0]), int(ccx - (cb[2] - cb[0]) // 2)))
+                    draw.text((co_x, ccy - cr - 62), callout_label, font=f_co, fill=accent_rgb)
+
+            # Top editorial title header (always centered, crisp, above character)
+            if top_label:
+                f_top = _fit_font(draw, top_label, max_width=W - 96, start_size=56, min_size=26, bold=True)
+                bbox = draw.textbbox((0, 0), top_label, font=f_top)
+                tw = bbox[2] - bbox[0]
+                draw.text(((W - tw) // 2, 120), top_label, font=f_top, fill=accent_rgb)
+
+            proc.stdin.write(frame.tobytes())
+    finally:
+        if proc.stdin:
+            proc.stdin.close()
+        stderr_out = proc.stderr.read().decode("utf-8", errors="replace") if proc.stderr else ""
+        ret = proc.wait(timeout=180)
+        if ret != 0:
+            raise RuntimeError(f"FFmpeg motion_story scene render failed (code {ret}): {stderr_out[-400:]}")
+
+
+def run_motion_story_engine(
+    topic: str,
+    job_dir: Path,
+    brain: CompanyBrain,
+    voice: str = "en-IN-PrabhatNeural",
+    public_dir: Path | None = None,
+    art_style: str = "dark_cinematic",
+    theme: str = "Universal Storytelling",
+    character_desc: str = "",
+) -> dict[str, Any]:
+    """
+    All-Rounder 2D Animated Story & Universal Character Engine (`--engine motion_story`):
+    1) 4-Brain Free AI Council designs a universal character sheet + 5 animated story scenes.
+    2) Free `edge-tts` voices every scene (supports Indian English, US/UK English, Malayalam, Hindi).
+    3) Streams real 24fps 2D vector animations (universal character motion, scale rulers,
+       ticking counters, parchment quote cards, circular zoom callouts) directly to FFmpeg.
+    4) Burns centered karaoke captions, enforces -14 LUFS + faststart, and exports to public/.
+    """
+    item_key = f"motion_story:{topic.lower().strip()}:{time.strftime('%Y%m%d', time.gmtime())}"
+    brain.check_pre_flight(item_key, estimated_cost_usd=0.10)
+
+    out_dir = job_dir / "out"
+    scene_dir = job_dir / "story_scenes"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    scene_dir.mkdir(parents=True, exist_ok=True)
+
+    resolved_v = _resolve_voice_preset(voice)[0]
+    lang_hint = "Malayalam" if resolved_v.startswith("ml-") else ("Hindi" if resolved_v.startswith("hi-") else "English")
+    council = AICouncil()
+    story_pkg = council.run_motion_story_council(
+        topic=topic,
+        brain=brain,
+        art_style=art_style,
+        theme=theme,
+        character_desc=character_desc,
+        language_hint=lang_hint,
+    )
+    character = story_pkg["character"]
+    scenes = story_pkg["scenes"]
+
+    scene_mp4s: list[Path] = []
+    indexed_segments: list[IndexedSegment] = []
+    cursor_t = 0.0
+
+    for idx, sc in enumerate(scenes, start=1):
+        narration = sc["narration"]
+        wav_p = scene_dir / f"story_{idx:02d}.wav"
+        clip_p = scene_dir / f"story_{idx:02d}.mp4"
+
+        dur = _synthesize_scene_voiceover(narration, wav_p, voice=voice)
+        _render_motion_story_scene(sc, character, idx - 1, dur, wav_p, clip_p, fps=24)
+        scene_mp4s.append(clip_p)
+
+        raw_words = [w for w in narration.split() if w.strip()]
+        w_dur = dur / max(len(raw_words), 1)
+        tokens: list[WordToken] = []
+        for wi, w in enumerate(raw_words):
+            ws = cursor_t + wi * w_dur
+            we = cursor_t + (wi + 1) * w_dur
+            tokens.append(WordToken(word=w, start=round(ws, 3), end=round(we, 3)))
+
+        indexed_segments.append(
+            IndexedSegment(
+                segment_id=idx - 1,
+                speaker="NARRATOR",
+                start=round(cursor_t, 3),
+                end=round(cursor_t + dur, 3),
+                text=narration,
+                words=tokens,
+            )
+        )
+        cursor_t += dur
+
+    concat_txt = scene_dir / "concat.txt"
+    concat_txt.write_text("\n".join(f"file '{p.resolve()}'" for p in scene_mp4s) + "\n", encoding="utf-8")
+    merged_mp4 = scene_dir / "merged_story.mp4"
+    run_cmd([
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_txt),
+        "-c", "copy", str(merged_mp4),
+    ])
+
+    ass_path = out_dir / "motion_story_01.ass"
+    safe_slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic)[:24].strip("_").lower() or "story"
+    final_mp4 = out_dir / f"story_{safe_slug}.mp4"
+    # Pass empty hook_overlay so ASS top banner doesn't collide with the animated scene header
+    write_ass_captions(
+        indexed_segments,
+        0,
+        len(indexed_segments) - 1,
+        0.0,
+        ass_path,
+        hook_overlay="",
+    )
+    ass_escaped = escape_ffmpeg_filter_path(ass_path)
+    run_cmd([
+        "ffmpeg", "-y",
+        "-i", str(merged_mp4),
+        "-t", f"{min(58.0, cursor_t):.3f}",
+        "-vf", f"scale=1080:1920,ass='{ass_escaped}'",
+        "-af", "loudnorm=I=-14:TP=-1.5:LRA=11",
+        "-c:v", "libx264", "-preset", "medium", "-crf", "20", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "48000",
+        "-movflags", "+faststart",
+        str(final_mp4),
+    ])
+
+    qa_ok = verify_rendered_mp4(final_mp4, min_duration=10.0)
+    export_to_public_dir([final_mp4], public_dir)
+    shutil.rmtree(scene_dir, ignore_errors=True)
+
+    clip_obj = ClipSpec(
+        clip_id="story_01",
+        start_segment_id=0,
+        end_segment_id=len(indexed_segments) - 1,
+        start_sec=0.0,
+        end_sec=round(min(58.0, cursor_t), 2),
+        duration_sec=round(min(58.0, cursor_t), 2),
+        mp4_path=str(final_mp4),
+        layout_mode="motion_story_2d_9x16",
+        qa_verified=qa_ok,
+        yt_title=story_pkg["yt_title"],
+        ig_caption=story_pkg["ig_caption"],
+        hook_overlay=story_pkg["hook_overlay"],
+        council_score=9.7,
+        council_models_used=story_pkg["council_models_used"],
+        contains_synthetic_media=True,
+        source_url=f"motion_story:{topic}",
+    )
+
+    result = {
+        "engine": "clipping",
+        "source_mode": "motion_story",
+        "status": "APPROVAL_PENDING",
+        "source_url": f"motion_story:{topic}",
+        "language": lang_hint,
+        "character": character,
+        "council_models_used": story_pkg["council_models_used"],
+        "clips": [asdict(clip_obj)],
+    }
+    brain.record_completion(
+        item_key,
+        "motion_story",
+        0.10,
+        {"topic": topic, "character": character["name"], "mp4_path": str(final_mp4)},
+    )
+    return result
+
+
+# ============================================================================
+# 9. UNIFIED CLI ENTRYPOINT (TREND SCOUT + 4-BRAIN FREE AI COUNCIL + SOCIAL PUBLISHER)
+# ============================================================================
+
+def pick_fresh_auto_topic(theme: str, brain: CompanyBrain, engine: str) -> str:
+    """
+    Picks a fresh, non-duplicate story topic for scheduled cron runs so automated
+    3x/day runs never collide with `05_memory_ledger.json`.
+    """
+    today_str = time.strftime("%Y%m%d", time.gmtime())
+    ledger_data, _ = load_ledger(brain.ledger_path.parent)
+    processed = set(ledger_data.get("processed_items", []))
+    council = AICouncil()
+    ai_raw = council.invoke_stage(
+        "groq",
+        "Return ONE short, high-curiosity YouTube Shorts story topic (5-10 words, no quotes, no numbering).",
+        f"Theme: {theme}. Give a fresh, fascinating scale/mystery/history/science story idea that viewers haven't seen yet. "
+        f"Avoid repeating recent titles: {list(processed)[-8:]}",
+    )
+    if ai_raw:
+        cand = " ".join(ai_raw.strip().strip('"').strip("'").splitlines()[0].split())[:72]
+        if len(cand) >= 10 and f"{engine}:{cand.lower().strip()}:{today_str}" not in processed:
+            log.info("Auto-topic selected via AI Council: %s", cand)
+            return cand
+
+    fallback_pool = [
+        "How Deep The Mariana Trench Really Goes",
+        "How Far Voyager 1 Has Traveled Into Deep Space",
+        "Why The Roman Concrete Formula Lasted 2000 Years",
+        "How Tall Olympus Mons Is Compared To Everest",
+        "The Forgotten Library That Changed Ancient Science",
+        "How Fast A Neutron Star Spins In Deep Space",
+        "Why The Great Pyramid Aligns Almost Perfectly True North",
+        "How Much Gold Is Still Hidden Inside Earth's Core",
+        "The Smallest Creature That Can Survive Outer Space",
+        "How One Algorithm Changed Modern Navigation Forever",
+    ]
+    for cand in fallback_pool:
+        if f"{engine}:{cand.lower().strip()}:{today_str}" not in processed:
+            log.info("Auto-topic selected from curated pool: %s", cand)
+            return cand
+    return f"{theme} Untold Story {time.strftime('%H%M', time.gmtime())}"
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Jagnor AI Master Company Worker — 6-LLM AI Council, Trend Discovery & Social Publishing"
+        description="Jagnor AI Master Company Worker — 4-Brain Free AI Council, Trend Discovery & Social Publishing"
     )
     parser.add_argument(
         "--stage",
@@ -3147,7 +3959,7 @@ def main() -> int:
     parser.add_argument(
         "--engine",
         default="clipping",
-        choices=["clipping", "ai_faceless", "raw_video_drop", "digital_product", "b2b_agency", "carousel_funnel"],
+        choices=["motion_story", "ai_faceless", "clipping", "raw_video_drop", "digital_product", "b2b_agency", "carousel_funnel"],
         help="Which monetization engine to execute during build stage",
     )
     parser.add_argument("--job-dir", required=True, help="Working directory for this ticket/job")
@@ -3168,7 +3980,33 @@ def main() -> int:
     parser.add_argument("--model", default="large-v3-turbo", help="[clipping] WhisperX / faster-whisper model")
     parser.add_argument("--allow-all-licenses", action="store_true", help="[clipping] Disable CC-only filter")
 
-    parser.add_argument("--title", default="Jagnor Pro Automation Suite", help="[digital_product / carousel_funnel] Title or topic")
+    parser.add_argument("--title", default="Jagnor Pro Automation Suite", help="[ai_faceless / digital_product / carousel_funnel] Title or topic")
+    parser.add_argument(
+        "--art-style",
+        default="dark_cinematic",
+        choices=list(ART_STYLE_PROMPTS.keys()),
+        help="[ai_faceless] Visual art style preset for animated scenes",
+    )
+    parser.add_argument(
+        "--theme",
+        default="Universal Storytelling",
+        help="[motion_story / ai_faceless] Content niche/theme guiding script & visuals",
+    )
+    parser.add_argument(
+        "--voice",
+        default="deep_male",
+        help="[motion_story / ai_faceless] Voice mood preset (deep_male, serious_male, mysterious_male, happy_male, deep_female, serious_female, mysterious_female, happy_female, etc.) or raw edge-tts voice",
+    )
+    parser.add_argument(
+        "--character",
+        default="",
+        help="[motion_story] Optional character description (leave blank for universal auto-creation)",
+    )
+    parser.add_argument(
+        "--auto-topic",
+        action="store_true",
+        help="[motion_story / ai_faceless] Auto-generate a fresh non-duplicate topic (used on scheduled runs)",
+    )
     parser.add_argument("--price", type=float, default=17.0, help="[digital_product / b2b_agency] Price in USD")
     parser.add_argument("--source-app-dir", default=None, help="[digital_product] Optional folder to bundle into zip")
 
@@ -3235,12 +4073,28 @@ def main() -> int:
                 if manifest is None:
                     raise RuntimeError(f"All {len(candidate_urls)} trending candidates failed. Last error: {last_err}")
 
-            elif args.engine == "ai_faceless":
-                manifest = run_ai_faceless_engine(
-                    topic=args.title or args.niche,
+            elif args.engine == "motion_story":
+                active_topic = pick_fresh_auto_topic(args.theme, brain, "motion_story") if args.auto_topic else (args.title or args.niche)
+                manifest = run_motion_story_engine(
+                    topic=active_topic,
                     job_dir=job_dir,
                     brain=brain,
+                    voice=args.voice,
                     public_dir=public_dir,
+                    art_style=args.art_style,
+                    theme=args.theme,
+                    character_desc=args.character,
+                )
+            elif args.engine == "ai_faceless":
+                active_topic = pick_fresh_auto_topic(args.theme, brain, "ai_faceless") if args.auto_topic else (args.title or args.niche)
+                manifest = run_ai_faceless_engine(
+                    topic=active_topic,
+                    job_dir=job_dir,
+                    brain=brain,
+                    voice=args.voice,
+                    public_dir=public_dir,
+                    art_style=args.art_style,
+                    theme=args.theme,
                 )
             elif args.engine == "raw_video_drop":
                 manifest = run_raw_video_drop_engine(
