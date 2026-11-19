@@ -2,10 +2,11 @@
   "spend_date_utc": "2026-11-19",
   "processed_items": [
     "ai_faceless:how 1 agent runs 7 ai teams:20261119",
-    "ai_faceless:how to escape from fire in a building:20261119"
+    "ai_faceless:how to escape from fire in a building:20261119",
+    "motion_story:how far voyager 1 has traveled into deep space:20261119"
   ],
   "allowlisted_channels": [],
-  "daily_spend_usd": 0.24,
+  "daily_spend_usd": 0.34,
   "daily_budget_cap_usd": 5.0,
   "publish_log": [],
   "history": [
@@ -27,6 +28,17 @@
       "summary": {
         "topic": "How to escape from fire in a building ",
         "mp4_path": "jobs/latest/out/faceless_how_to_escape_from_fire.mp4"
+      }
+    },
+    {
+      "timestamp": 1795113702,
+      "engine": "motion_story",
+      "item_key": "motion_story:how far voyager 1 has traveled into deep space:20261119",
+      "cost_usd": 0.1,
+      "summary": {
+        "topic": "How Far Voyager 1 Has Traveled Into Deep Space",
+        "character": "The Chronicler",
+        "mp4_path": "jobs/latest/out/story_how_far_voyager_1_has_tr.mp4"
       }
     }
   ]
