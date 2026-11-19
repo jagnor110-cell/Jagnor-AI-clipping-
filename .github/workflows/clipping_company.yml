@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       stage:
-        description: "Pipeline Stage: full (auto-discover + 6-LLM council + clip + publish), build (preview only), or publish"
+        description: "Pipeline Stage: full (build + publish), build (preview only), or publish"
         required: true
         default: "full"
         type: choice
@@ -15,21 +15,65 @@ on:
       engine:
         description: "Business Engine to run"
         required: true
-        default: "clipping"
+        default: "motion_story"
         type: choice
         options:
-          - clipping
+          - motion_story
           - ai_faceless
+          - clipping
           - raw_video_drop
           - carousel_funnel
           - digital_product
           - b2b_agency
+      title_or_topic:
+        description: "[motion_story / ai_faceless / carousel] Story topic or title"
+        required: false
+        default: "How Far Voyager 1 Has Traveled Into Deep Space"
+      theme:
+        description: "[motion_story / ai_faceless] Any theme (History, Mythology, Space, AI, Psychology, Finance)"
+        required: false
+        default: "Universal Storytelling"
+      character_desc:
+        description: "[motion_story] Optional character idea (leave blank to auto-create universally)"
+        required: false
+        default: ""
+      art_style:
+        description: "[motion_story / ai_faceless] Visual art style"
+        required: true
+        default: "dark_cinematic"
+        type: choice
+        options:
+          - dark_cinematic
+          - anime
+          - cyberpunk
+          - 3d_pixar
+          - comic_book
+          - minimalist_sketch
+          - oil_painting
+      voice:
+        description: "[motion_story / ai_faceless] Narrator Voice & Mood (serious, happy, mysterious, deep male/female)"
+        required: true
+        default: "deep_male"
+        type: choice
+        options:
+          - deep_male
+          - serious_male
+          - mysterious_male
+          - happy_male
+          - indian_storyteller_male
+          - deep_female
+          - serious_female
+          - mysterious_female
+          - happy_female
+          - malayalam_mysterious_male
+          - malayalam_female
+          - hindi_serious_male
       niche_query:
-        description: "[Trend Scout] Niche keywords/hashtag to find trending YouTube & Instagram videos"
+        description: "[clipping] Niche keywords/hashtag to find trending videos"
         required: false
         default: "AI agents automation tech podcast"
       trend_platform:
-        description: "[Trend Scout] Source platform to scan for trending videos"
+        description: "[clipping] Source platform to scan for trending videos"
         required: true
         default: "auto"
         type: choice
@@ -38,15 +82,11 @@ on:
           - youtube
           - instagram
       source_url:
-        description: "[Optional] Specific YouTube or Instagram video URL (leave blank to auto-discover trending)"
+        description: "[clipping] Optional specific YouTube or Instagram video URL"
         required: false
         default: ""
-      title_or_topic:
-        description: "[ai_faceless / carousel / digital_product] Topic or product title"
-        required: false
-        default: "How 1 Agent Runs 7 AI Teams"
       allow_all_licenses:
-        description: "[clipping] Override CC-only license check (ONLY check if you own/have creator permission)"
+        description: "[clipping] Override CC-only license check (ONLY if you own/have permission)"
         required: false
         default: false
         type: boolean
@@ -80,20 +120,19 @@ jobs:
     timeout-minutes: 35
 
     env:
-      # 6-Model AI Council Secrets (Gemini, Claude, Grok, ChatGPT, NVIDIA NIM, and OpenRouter)
+      # 4-Brain Free AI Council (100% Free-Tier Stack)
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
       NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      # 2 Free Visual APIs for Motion-Animated Faceless Shorts
+      POLLINATIONS_API_KEY: ${{ secrets.POLLINATIONS_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
       # Gmail SMTP Reporting Secrets
       COMPANY_GMAIL: ${{ secrets.COMPANY_GMAIL }}
       GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
       REPORT_TO_EMAIL: ${{ secrets.REPORT_TO_EMAIL }}
       # Media & Social Publishing Secrets (Isolated per company)
-      # Note: When GitHub Pages deploys from main / (root), set PUBLIC_VIDEO_BASE_URL to:
-      #       https://<your-github-username>.github.io/Jagnor-Clipping/public
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       YT_COOKIES_TXT: ${{ secrets.YT_COOKIES_TXT }}
       PUBLIC_VIDEO_BASE_URL: ${{ secrets.PUBLIC_VIDEO_BASE_URL }}
@@ -119,26 +158,35 @@ jobs:
       - name: Install System FFmpeg & Fonts
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ffmpeg libmagic1 fonts-dejavu-core
+          sudo apt-get install -y ffmpeg libmagic1 fonts-dejavu-core fonts-noto-core fonts-indic
 
       - name: Install Python Dependencies (yt-dlp + faster-whisper CPU + edge-tts + MediaPipe + Pillow)
         run: |
           python3 -m pip install --upgrade pip
           pip install "yt-dlp[default]" faster-whisper edge-tts opencv-python-headless pillow numpy mediapipe
 
-      - name: Step 1 — Auto-Discover Trending Video, Run 6-LLM Council & Render 9:16 Short to public/
+      - name: Step 1 — Run 4-Brain Free AI Council & Render 9:16 Short to public/
         if: ${{ github.event.inputs.stage == 'build' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
         env:
-          INPUT_ENGINE: ${{ github.event.inputs.engine || 'clipping' }}
+          INPUT_ENGINE: ${{ github.event.inputs.engine || 'motion_story' }}
           INPUT_URL: ${{ github.event.inputs.source_url }}
           INPUT_NICHE: ${{ github.event.inputs.niche_query || 'AI agents automation tech podcast' }}
           INPUT_TREND_PLAT: ${{ github.event.inputs.trend_platform || 'auto' }}
-          INPUT_TITLE: ${{ github.event.inputs.title_or_topic || 'AI Automation Blueprint' }}
+          INPUT_TITLE: ${{ github.event.inputs.title_or_topic || 'How Far Voyager 1 Has Traveled Into Deep Space' }}
+          INPUT_ART_STYLE: ${{ github.event.inputs.art_style || 'dark_cinematic' }}
+          INPUT_THEME: ${{ github.event.inputs.theme || 'Universal Storytelling' }}
+          INPUT_CHARACTER: ${{ github.event.inputs.character_desc }}
+          INPUT_VOICE: ${{ github.event.inputs.voice || 'deep_male' }}
           INPUT_ALLOW_ALL: ${{ github.event.inputs.allow_all_licenses }}
         run: |
           ALLOW_FLAG=""
           if [ "$INPUT_ALLOW_ALL" = "true" ]; then
             ALLOW_FLAG="--allow-all-licenses"
+          fi
+
+          AUTO_TOPIC_FLAG=""
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            AUTO_TOPIC_FLAG="--auto-topic"
           fi
 
           python3 jagnor_master_worker.py \
@@ -148,13 +196,18 @@ jobs:
             --niche "$INPUT_NICHE" \
             --trend-platform "$INPUT_TREND_PLAT" \
             --title "$INPUT_TITLE" \
+            --art-style "$INPUT_ART_STYLE" \
+            --theme "$INPUT_THEME" \
+            --character "$INPUT_CHARACTER" \
+            --voice "$INPUT_VOICE" \
             --device auto \
             --model base \
             --job-dir ./jobs/latest \
             --brain-dir ./brain \
             --public-dir ./public \
             --inbox-dir ./inbox_videos \
-            $ALLOW_FLAG
+            $ALLOW_FLAG \
+            $AUTO_TOPIC_FLAG
 
       - name: Step 2 — Prune Old Media & Commit Rendered Short to public/ (with .nojekyll)
         if: ${{ github.event.inputs.stage == 'build' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
@@ -164,19 +217,19 @@ jobs:
           if [ ! -f "public/index.html" ]; then
             echo "<html><body><h1>Jagnor Clipping AI Media Host</h1></body></html>" > public/index.html
           fi
-          # Keep only the 15 newest MP4s in public/ to prevent Git repository bloat
           ls -t public/*.mp4 2>/dev/null | tail -n +16 | xargs -r rm -f
           rm -f jobs/latest/source.mp4 jobs/latest/audio_16k.wav jobs/latest/.yt_cookies.txt
           git config user.name "Jagnor Clipping Bot"
           git config user.email "actions@github.com"
+          rm -f brain/*.lock jobs/latest/*.lock
           git add .nojekyll public/ brain/
           if [ -f "jobs/latest/manifest.json" ]; then
             git add jobs/latest/manifest.json
           fi
           if ! git diff --staged --quiet; then
-            git commit -m "chore(pipeline): export 6-LLM council clip to public/ & update ledger [skip ci]"
-            git pull --rebase origin HEAD || true
-            git push origin HEAD
+            git commit -m "chore(pipeline): export animated story short to public/ & update ledger [skip ci]"
+            git pull --rebase -X theirs origin main || (git rebase --abort || true)
+            git push origin HEAD:main
           fi
 
       - name: Step 3 — Wait 45s for GitHub Pages CDN Propagation
@@ -214,13 +267,14 @@ jobs:
         run: |
           git config user.name "Jagnor Clipping Bot"
           git config user.email "actions@github.com"
+          rm -f brain/*.lock jobs/latest/*.lock
           git add brain/
           if [ -f "jobs/latest/manifest.json" ]; then
             git add jobs/latest/manifest.json
           fi
           if ! git diff --staged --quiet; then
             git commit -m "chore(publish): log YouTube Shorts & Instagram Reels receipts [skip ci]"
-            git pull --rebase origin HEAD || true
-            git push origin HEAD
+            git pull --rebase -X theirs origin main || (git rebase --abort || true)
+            git push origin HEAD:main
           fi
           
