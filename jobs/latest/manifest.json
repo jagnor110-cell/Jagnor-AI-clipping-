@@ -2,16 +2,16 @@
   "engine": "clipping",
   "source_mode": "motion_story",
   "status": "APPROVAL_PENDING",
-  "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space",
+  "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space and return ",
   "language": "English",
   "character": {
-    "name": "The Chronicler",
-    "archetype": "scholar",
-    "primary_hex": "#0A0F2C",
+    "name": "Voyager 1",
+    "archetype": "explorer",
+    "primary_hex": "#00BFFF",
     "accent_hex": "#FFD700",
-    "skin_hex": "#1A237E",
-    "aura_hex": "#00FFFF",
-    "backdrop_mood": "cosmic solitude"
+    "skin_hex": "#FFFFFF",
+    "aura_hex": "#FF6600",
+    "visual_world": "space"
   },
   "council_models_used": [
     "openrouter:openrouter/free",
@@ -25,14 +25,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 52.14,
-      "duration_sec": 52.14,
+      "end_sec": 50.42,
+      "duration_sec": 50.42,
       "mp4_path": "jobs/latest/out/story_how_far_voyager_1_has_tr.mp4",
       "layout_mode": "motion_story_2d_9x16",
       "qa_verified": true,
-      "yt_title": "Voyager 1's Endless Journey #Shorts",
-      "ig_caption": "Voyager 1 is 24.9 billion km away — and still carrying Earth's voice into the unknown. 🌌 If you could add one sound to the Golden Record, what would it be? Drop it below 👇 #Voyager1 #Interstellar #GoldenRecord #Space #Cosmos #DeepSpace #NASA #Exploration #Future",
-      "hook_overlay": "IN 1977, HUMANITY LAUNCHED A WHISPER INTO ",
+      "yt_title": "Voyager 1: 24B KM Into Deep Space #Shorts",
+      "ig_caption": "Voyager 1 is humanity’s farthest messenger—and it’s only getting farther. From launch in 1977 to interstellar space in 2012, this tiny probe is still sailing the cosmic ocean. Would you go with it? 🪐🚀 #Voyager1 #SpaceExploration #Interstellar",
+      "hook_overlay": "IT MAY NEVER RETURN. HOW FAR HAS IT...",
       "council_score": 9.7,
       "council_models_used": [
         "openrouter:openrouter/free",
@@ -41,7 +41,7 @@
         "openrouter:openrouter/free"
       ],
       "contains_synthetic_media": true,
-      "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space"
+      "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space and return "
     }
   ]
 }
