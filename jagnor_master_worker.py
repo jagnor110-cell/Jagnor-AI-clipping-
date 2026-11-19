@@ -17,6 +17,7 @@ Free Visual Engines (`--engine ai_faceless` with selectable `--art-style` & `--t
 from __future__ import annotations
 
 import argparse
+import base64
 import fcntl
 import gc
 import json
@@ -1313,6 +1314,8 @@ class AICouncil:
         brain: CompanyBrain,
         art_style: str = "dark_cinematic",
         theme: str = "AI & Tech Automation",
+        character_desc: str = "",
+        language_hint: str = "English",
     ) -> dict[str, Any]:
         """
         Passes a topic, theme, and art_style through the 4-Brain Free AI Council to produce
@@ -1323,7 +1326,8 @@ class AICouncil:
         s1 = self.invoke_stage(
             "gemini",
             "You are Stage 1 (Gemini Viral Strategist). Outline a 5-scene 35-second faceless vertical video script tailored to the requested theme and art style.",
-            f"Theme: {theme}\nArt Style: {art_style} ({style_desc})\nTopic: {topic}\n"
+            f"Theme: {theme}\nArt Style: {art_style} ({style_desc})\nTopic: {topic}\nLanguage: {language_hint}\n"
+            f"Character/Subject Lock: {character_desc or 'Topic-matched consistent visual subject'}\n"
             f"ICP:\n{brain.identity_icp}\n"
             "Give 5 short scenes with narration (12-16 words each), a vivid visual_prompt matching the Art Style, and a 2-3 word stock_keywords phrase for each scene.",
         )
@@ -3057,6 +3061,158 @@ def _center_crop_9x16(im: Image.Image, out_img: Path) -> None:
     rgb.resize((1080, 1920), Image.Resampling.LANCZOS).save(out_img, format="PNG")
 
 
+def _apply_art_style_filter(im: Image.Image, art_style: str) -> Image.Image:
+    """
+    Transforms any fallback photo using OpenCV so it matches the user's chosen `art_style`
+    (anime cel-shading, comic ink outlines, cyberpunk neon, oil painting, minimalist sketch,
+    or dark cinematic film grading) — never raw unstyled photography.
+    """
+    try:
+        bgr = cv2.cvtColor(np.asarray(im.convert("RGB")), cv2.COLOR_RGB2BGR)
+        style = (art_style or "dark_cinematic").lower()
+
+        if style in {"anime", "comic_book"}:
+            # Bilateral color smoothing + crisp ink edge overlay (cel-shaded illustration look)
+            smooth = cv2.bilateralFilter(bgr, d=9, sigmaColor=75, sigmaSpace=75)
+            smooth = cv2.bilateralFilter(smooth, d=9, sigmaColor=75, sigmaSpace=75)
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            edges = cv2.adaptiveThreshold(
+                cv2.medianBlur(gray, 5), 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 9, 7
+            )
+            edges_bgr = cv2.cvtColor(edges, cv2.COLOR_GRAY2BGR)
+            out = cv2.bitwise_and(smooth, edges_bgr)
+            # Boost vibrance slightly
+            hsv = cv2.cvtColor(out, cv2.COLOR_BGR2HSV).astype(np.float32)
+            hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.28, 0, 255)
+            out = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        elif style == "cyberpunk":
+            # High-contrast cyan/magenta neon split-tone grading
+            out = cv2.bilateralFilter(bgr, d=7, sigmaColor=50, sigmaSpace=50).astype(np.float32)
+            out[:, :, 0] = np.clip(out[:, :, 0] * 1.28 + 18, 0, 255)  # Blue/Cyan boost
+            out[:, :, 1] = np.clip(out[:, :, 1] * 0.88, 0, 255)
+            out[:, :, 2] = np.clip(out[:, :, 2] * 1.22 + 12, 0, 255)  # Magenta/Red boost
+            out = out.astype(np.uint8)
+        elif style == "oil_painting":
+            out = cv2.stylization(bgr, sigma_s=60, sigma_r=0.45)
+        elif style == "minimalist_sketch":
+            gray_sketch, _ = cv2.pencilSketch(bgr, sigma_s=50, sigma_r=0.07, shade_factor=0.04)
+            # Dark slate paper with warm gold-tinted sketch highlights
+            inv = 255 - gray_sketch
+            out = np.zeros_like(bgr)
+            out[:, :, 0] = np.clip(22 + inv * 0.45, 0, 255).astype(np.uint8)
+            out[:, :, 1] = np.clip(28 + inv * 0.72, 0, 255).astype(np.uint8)
+            out[:, :, 2] = np.clip(38 + inv * 0.88, 0, 255).astype(np.uint8)
+        elif style == "3d_pixar":
+            out = cv2.edgePreservingFilter(bgr, flags=1, sigma_s=55, sigma_r=0.45)
+            hsv = cv2.cvtColor(out, cv2.COLOR_BGR2HSV).astype(np.float32)
+            hsv[:, :, 1] = np.clip(hsv[:, :, 1] * 1.25, 0, 255)
+            hsv[:, :, 2] = np.clip(hsv[:, :, 2] * 1.06, 0, 255)
+            out = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
+        else:
+            # dark_cinematic: deep shadows, teal/amber film grade
+            out = bgr.astype(np.float32)
+            out[:, :, 0] = np.clip(out[:, :, 0] * 1.08, 0, 255)
+            out[:, :, 1] = np.clip(out[:, :, 1] * 0.96, 0, 255)
+            out[:, :, 2] = np.clip(out[:, :, 2] * 1.05, 0, 255)
+            out = cv2.convertScaleAbs(out, alpha=1.08, beta=-14)
+
+        return Image.fromarray(cv2.cvtColor(out, cv2.COLOR_BGR2RGB), mode="RGB")
+
+
+    except Exception as exc:
+        log.debug("Art style filter [%s] fallback (%s); returning RGB image.", art_style, exc)
+        return im.convert("RGB")
+
+def _fetch_openrouter_ai_image(full_prompt: str, out_img: Path, scene_num: int) -> bool:
+    """
+    Generates a true 9:16 AI-styled image via OpenRouter's Image API (`POST /api/v1/images`)
+    using `OPENROUTER_API_KEY`, matching the exact topic, theme, character, and art_style.
+    """
+    or_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not or_key:
+        return False
+    models = [
+        os.environ.get("OPENROUTER_IMAGE_MODEL", "").strip(),
+        "bytedance-seed/seedream-4.5",
+        "black-forest-labs/flux.2-klein-4b",
+    ]
+    for model in [m for m in dict.fromkeys(models) if m]:
+        payload = {
+            "model": model,
+            "prompt": full_prompt[:900],
+            "aspect_ratio": "9:16",
+            "n": 1,
+        }
+        req = urllib.request.Request(
+            "https://openrouter.ai/api/v1/images",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": f"Bearer {or_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/jagnor110-cell",
+                "X-Title": "Jagnor AI Studio",
+            },
+            method="POST",
+        )
+        try:
+            raw, _ = urlopen_with_retry(req, timeout=60, max_attempts=1)
+            data = json.loads(raw.decode("utf-8"))
+            items = data.get("data") or []
+            if not items:
+                continue
+            item = items[0]
+            img_bytes: bytes | None = None
+            if item.get("b64_json"):
+                b64_str = str(item["b64_json"])
+                if "," in b64_str and b64_str.startswith("data:"):
+                    b64_str = b64_str.split(",", 1)[1]
+                img_bytes = base64.b64decode(b64_str)
+            elif item.get("url"):
+                with urllib.request.urlopen(urllib.request.Request(str(item["url"]), headers={"User-Agent": "Mozilla/5.0"}), timeout=30) as resp:
+                    img_bytes = resp.read()
+            if img_bytes and len(img_bytes) > 10000:
+                tmp_f = out_img.with_suffix(".or.img")
+                tmp_f.write_bytes(img_bytes)
+                with Image.open(tmp_f) as im:
+                    _center_crop_9x16(im, out_img)
+                tmp_f.unlink(missing_ok=True)
+                log.info("Scene %d custom AI art generated via OpenRouter (%s).", scene_num, model)
+                return True
+        except Exception as exc:
+            err_s = str(exc)
+            log.debug("Scene %d OpenRouter image (%s) skipped: %s", scene_num, model, err_s)
+            if any(code in err_s for code in ("HTTP 401", "HTTP 402", "HTTP 403")):
+                break
+            continue
+    return False
+
+
+def _fetch_hf_ai_image(full_prompt: str, out_img: Path, scene_num: int) -> bool:
+    """Generates a custom 9:16 AI image via Hugging Face Inference API (`HF_TOKEN`) if configured."""
+    hf_key = os.environ.get("HF_TOKEN", "").strip()
+    if not hf_key:
+        return False
+    req = urllib.request.Request(
+        "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+        data=json.dumps({"inputs": full_prompt[:600]}).encode("utf-8"),
+        headers={"Authorization": f"Bearer {hf_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        raw, _ = urlopen_with_retry(req, timeout=60, max_attempts=1)
+        if len(raw) > 10000:
+            tmp_f = out_img.with_suffix(".hf.img")
+            tmp_f.write_bytes(raw)
+            with Image.open(tmp_f) as im:
+                _center_crop_9x16(im, out_img)
+            tmp_f.unlink(missing_ok=True)
+            log.info("Scene %d custom AI art generated via Hugging Face FLUX.", scene_num)
+            return True
+    except Exception as exc:
+        log.debug("Scene %d HF FLUX image skipped: %s", scene_num, exc)
+    return False
+
+
 def _fetch_wikimedia_topic_image(query: str, out_img: Path, scene_num: int, used_urls: set[str] | None = None) -> bool:
     """
     Fetches real, topic-accurate public-domain / CC photographs matching the exact scene
@@ -3266,10 +3422,15 @@ def _fetch_free_ai_scene_image(
             if attempt < max_attempts:
                 time.sleep(4.0 * attempt)
 
-    if _fetch_pexels_portrait_image(stock_keywords or visual_prompt, out_img, scene_num):
+    if _fetch_openrouter_ai_image(full_prompt, out_img, scene_num):
         return out_img
 
-    if _fetch_wikimedia_topic_image(stock_keywords or fallback_headline, out_img, scene_num):
+    if _fetch_hf_ai_image(full_prompt, out_img, scene_num):
+        return out_img
+
+    if _fetch_pexels_portrait_image(stock_keywords or visual_prompt, out_img, scene_num) or _fetch_wikimedia_topic_image(stock_keywords or fallback_headline, out_img, scene_num):
+        with Image.open(out_img) as im:
+            _apply_art_style_filter(im, art_style).save(out_img, format="PNG")
         return out_img
 
     log.info("Scene %d image APIs unavailable (%s); rendering branded fallback visual.", scene_num, last_exc)
@@ -3372,10 +3533,11 @@ def run_ai_faceless_engine(
     topic: str,
     job_dir: Path,
     brain: CompanyBrain,
-    voice: str = "en-US-AndrewNeural",
+    voice: str = "deep_male",
     public_dir: Path | None = None,
     art_style: str = "dark_cinematic",
     theme: str = "AI & Tech Automation",
+    character_desc: str = "",
 ) -> dict[str, Any]:
     """
     100% Hands-Free AI Faceless Short Generator:
@@ -3393,7 +3555,15 @@ def run_ai_faceless_engine(
     scene_dir.mkdir(parents=True, exist_ok=True)
 
     council = AICouncil()
-    script_pkg = council.run_6_brain_faceless_script(topic, brain, art_style=art_style, theme=theme)
+    resolved_v = _resolve_voice_preset(voice)[0]
+    lang_hint = "Malayalam" if resolved_v.startswith("ml-") else ("Hindi" if resolved_v.startswith("hi-") else "English")
+    log.info(
+        "Active Settings [ai_faceless]: topic='%s' | theme='%s' | art_style='%s' | voice='%s' (%s) | character='%s'",
+        topic, theme, art_style, voice, lang_hint, character_desc or "auto",
+    )
+    script_pkg = council.run_6_brain_faceless_script(
+        topic, brain, art_style=art_style, theme=theme, character_desc=character_desc, language_hint=lang_hint
+    )
     scenes = script_pkg["scenes"]
 
     scene_mp4s: list[Path] = []
@@ -3402,7 +3572,7 @@ def run_ai_faceless_engine(
 
     for idx, sc in enumerate(scenes, start=1):
         narration = sc["narration"]
-        vis_prompt = sc["visual_prompt"]
+        vis_prompt = f"{sc['visual_prompt']}, featuring {character_desc}" if character_desc.strip() else sc["visual_prompt"]
         img_p = scene_dir / f"scene_{idx:02d}.png"
         wav_p = scene_dir / f"scene_{idx:02d}.wav"
         clip_p = scene_dir / f"scene_{idx:02d}.mp4"
@@ -3476,7 +3646,7 @@ def run_ai_faceless_engine(
 
     # Burn HookBanner + word-by-word gold karaoke ASS captions and enforce -14 LUFS + faststart
     ass_path = out_dir / "faceless_01.ass"
-    safe_slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic)[:24].strip("_").lower() or "short"
+    safe_slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic)[:24].strip("_").lower() or f"short_{int(time.time()) % 100000}"
     final_mp4 = out_dir / f"faceless_{safe_slug}.mp4"
     write_ass_captions(
         indexed_segments,
@@ -3527,7 +3697,10 @@ def run_ai_faceless_engine(
         "source_mode": "ai_faceless",
         "status": "APPROVAL_PENDING",
         "source_url": f"ai_faceless:{topic}",
-        "language": "en",
+        "language": lang_hint,
+        "settings_applied": {
+            "topic": topic, "theme": theme, "art_style": art_style, "voice": voice, "character_desc": character_desc,
+        },
         "council_models_used": script_pkg["council_models_used"],
         "clips": [asdict(clip_obj)],
     }
@@ -3761,27 +3934,35 @@ def _fetch_story_backdrop_if_available(
     scene_num: int,
     tmp_dir: Path,
     topic: str = "",
+    theme: str = "",
+    character_desc: str = "",
     used_urls: set[str] | None = None,
 ) -> Image.Image | None:
     """
-    Fetches a real, narration-matched 1080x1920 visual for this exact scene in priority order:
-      1) Pollinations.ai (`POLLINATIONS_API_KEY`) locked to scene narration + art_style
-      2) Pexels HD Portrait Photos (`PEXELS_API_KEY`) matched to exact scene keywords
-      3) Wikimedia Commons real public-domain/CC photography (100% free, zero API key)
-    Darkens slightly for crisp animated HUD/caption contrast; returns None only if offline.
+    Strictly follows ALL pre-workflow instructions (`art_style`, `theme`, `topic`, `character_desc`):
+      1) Pollinations.ai (`POLLINATIONS_API_KEY`) — custom AI art
+      2) OpenRouter Image API (`OPENROUTER_API_KEY`) — custom AI art
+      3) Hugging Face FLUX (`HF_TOKEN`) — custom AI art
+      4) Stylized topic media (Pexels / Wikimedia transformed via `_apply_art_style_filter`
+         so it NEVER looks like raw unstyled photography)
     """
     tmp_png = tmp_dir / f"story_bg_{scene_num:02d}.png"
     narration = str(scene.get("narration") or "")
     vp = str(scene.get("visual_prompt") or "")
     sk = _extract_narration_search_query(narration, str(scene.get("stock_keywords") or ""), topic or str(scene.get("top_label") or ""))
 
+    style_suffix = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
+    char_clause = f", featuring {character_desc}" if character_desc.strip() else ""
+    theme_clause = f", theme: {theme}" if theme.strip() else ""
+    full_prompt = f"{vp or sk}{char_clause}{theme_clause}, topic: {topic}, {style_suffix}, vertical 9:16 composition"
+
     poll_key = os.environ.get("POLLINATIONS_API_KEY", "").strip()
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
-    loaded = False
+    loaded_ai = False
+    loaded_photo = False
 
     if poll_key:
-        style_suffix = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
-        encoded = urllib.parse.quote(f"{vp or sk}, {style_suffix}, vertical 9:16 composition")
+        encoded = urllib.parse.quote(full_prompt)
         url = f"https://gen.pollinations.ai/image/{encoded}?width=1080&height=1920&model=flux&nologo=true&seed={scene_num * 211}"
         try:
             req = urllib.request.Request(url, headers={"Authorization": f"Bearer {poll_key}", "User-Agent": "Mozilla/5.0"})
@@ -3795,20 +3976,26 @@ def _fetch_story_backdrop_if_available(
                     w, h = rgb.size
                     rgb.crop((0, 0, w, int(h * 0.94))).resize((1080, 1920), Image.Resampling.LANCZOS).save(tmp_png, format="PNG")
                 tmp_jpg.unlink(missing_ok=True)
-                loaded = True
+                loaded_ai = True
         except Exception as exc:
-            log.info("Story scene %d Pollinations backdrop skipped (%s).", scene_num, exc)
+            log.info("Story scene %d Pollinations AI art skipped (%s).", scene_num, exc)
 
-    if not loaded and pexels_key:
-        loaded = _fetch_pexels_portrait_image(sk, tmp_png, scene_num)
+    if not loaded_ai:
+        loaded_ai = _fetch_openrouter_ai_image(full_prompt, tmp_png, scene_num)
 
-    # Free zero-key real-world photo match from Wikimedia Commons (NASA, history, science, landmarks)
-    if not loaded:
-        loaded = _fetch_wikimedia_topic_image(sk, tmp_png, scene_num, used_urls=used_urls)
+    if not loaded_ai:
+        loaded_ai = _fetch_hf_ai_image(full_prompt, tmp_png, scene_num)
 
-    if loaded and tmp_png.exists():
+    if not loaded_ai and pexels_key:
+        loaded_photo = _fetch_pexels_portrait_image(sk, tmp_png, scene_num)
+
+    if not loaded_ai and not loaded_photo:
+        loaded_photo = _fetch_wikimedia_topic_image(sk, tmp_png, scene_num, used_urls=used_urls)
+
+    if (loaded_ai or loaded_photo) and tmp_png.exists():
         with Image.open(tmp_png) as im:
-            arr = np.asarray(im.convert("RGB"), dtype=np.float32) * 0.62
+            styled = _apply_art_style_filter(im, art_style) if loaded_photo else im.convert("RGB")
+            arr = np.asarray(styled, dtype=np.float32) * 0.65
             return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), mode="RGB")
     return None
 
@@ -3824,6 +4011,8 @@ def _render_motion_story_scene(
     art_style: str = "dark_cinematic",
     tmp_dir: Path | None = None,
     topic: str = "",
+    theme: str = "",
+    character_desc: str = "",
     used_urls: set[str] | None = None,
 ) -> None:
     """
@@ -3844,8 +4033,8 @@ def _render_motion_story_scene(
     quote_text = str(scene.get("quote_text") or scene.get("narration") or "")
     callout_label = str(scene.get("callout_label") or "")
 
-    photo_bg = _fetch_story_backdrop_if_available(scene, art_style, scene_idx + 1, tmp_dir or out_mp4.parent, topic=topic, used_urls=used_urls)
-    bg_base = photo_bg if photo_bg is not None else _build_gradient_backdrop(W, H, visual_world, scene_idx)
+    photo_bg = _fetch_story_backdrop_if_available(scene, art_style, scene_idx + 1, tmp_dir or out_mp4.parent, topic=topic, theme=theme, character_desc=character_desc, used_urls=used_urls)
+    bg_base = photo_bg if photo_bg is not None else _apply_art_style_filter(_build_gradient_backdrop(W, H, visual_world, scene_idx), art_style)
     has_photo_bg = photo_bg is not None
 
     sample_all = f"{top_label} {quote_title} {quote_text} {callout_label}"
@@ -4051,6 +4240,10 @@ def run_motion_story_engine(
 
     resolved_v = _resolve_voice_preset(voice)[0]
     lang_hint = "Malayalam" if resolved_v.startswith("ml-") else ("Hindi" if resolved_v.startswith("hi-") else "English")
+    log.info(
+        "Active Settings [motion_story]: topic='%s' | theme='%s' | art_style='%s' | voice='%s' (%s) | character='%s'",
+        topic, theme, art_style, voice, lang_hint, character_desc or "auto",
+    )
     council = AICouncil()
     story_pkg = council.run_motion_story_council(
         topic=topic,
@@ -4085,6 +4278,8 @@ def run_motion_story_engine(
             art_style=art_style,
             tmp_dir=scene_dir,
             topic=topic,
+            theme=theme,
+            character_desc=character_desc,
             used_urls=used_media_urls,
         )
         scene_mp4s.append(clip_p)
@@ -4118,7 +4313,7 @@ def run_motion_story_engine(
     ])
 
     ass_path = out_dir / "motion_story_01.ass"
-    safe_slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic)[:24].strip("_").lower() or "story"
+    safe_slug = re.sub(r"[^a-zA-Z0-9]+", "_", topic)[:24].strip("_").lower() or f"story_{int(time.time()) % 100000}"
     final_mp4 = out_dir / f"story_{safe_slug}.mp4"
     # Pass empty hook_overlay so ASS top banner doesn't collide with the animated scene header
     write_ass_captions(
@@ -4171,6 +4366,9 @@ def run_motion_story_engine(
         "status": "APPROVAL_PENDING",
         "source_url": f"motion_story:{topic}",
         "language": lang_hint,
+        "settings_applied": {
+            "topic": topic, "theme": theme, "art_style": art_style, "voice": voice, "character_desc": character_desc,
+        },
         "character": character,
         "council_models_used": story_pkg["council_models_used"],
         "clips": [asdict(clip_obj)],
@@ -4377,6 +4575,7 @@ def main() -> int:
                     public_dir=public_dir,
                     art_style=args.art_style,
                     theme=args.theme,
+                    character_desc=args.character,
                 )
             elif args.engine == "raw_video_drop":
                 manifest = run_raw_video_drop_engine(
