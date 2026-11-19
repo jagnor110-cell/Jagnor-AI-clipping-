@@ -2,7 +2,7 @@
   "engine": "clipping",
   "source_mode": "ai_faceless",
   "status": "APPROVAL_PENDING",
-  "source_url": "ai_faceless:How 1 Agent Runs 7 AI Teams",
+  "source_url": "ai_faceless:How to escape from fire in a building ",
   "language": "en",
   "council_models_used": [
     "openrouter:openrouter/auto",
@@ -10,7 +10,7 @@
     "openrouter:openrouter/auto",
     "openrouter:openai/gpt-4o-mini",
     "openrouter:openrouter/auto",
-    "openrouter:openrouter/auto"
+    "openrouter:openai/gpt-4o-mini"
   ],
   "clips": [
     {
@@ -18,14 +18,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 30.81,
-      "duration_sec": 30.81,
-      "mp4_path": "jobs/latest/out/faceless_how_1_agent_runs_7_ai_te.mp4",
+      "end_sec": 29.23,
+      "duration_sec": 29.23,
+      "mp4_path": "jobs/latest/out/faceless_how_to_escape_from_fire.mp4",
       "layout_mode": "ai_faceless_9x16",
       "qa_verified": true,
-      "yt_title": "One Agent, Seven Teams, Zero Employees! #Shorts",
-      "ig_caption": "One agent. Seven AI teams. Zero employees. That’s not a metaphor—it’s an org chart. Here’s how a single agent can support seven teams—without hiring a single person. 🤖\n\nThe orchestrator never does the work. It routes, reviews, and fires. Seven specialists execute: research, content, design, code, distribution, analytics, QA.\n\nYou stop prompting. You start managing. Output multiplies; your hours stay flat.\n\nBuild the org chart once. Let it compound while you sleep.\n\nSave this. Then go build the layer. 🔁\n\n#AIAgents #AgenticAI #SoloOperator #AIOrchestration #BuildInPublic #AIAutomation #OnePersonBusiness #FutureOfWork #AITools #CreatorEconomy #AIAgentOrchestration #MultiAgentWorkflows #AutonomousOps",
-      "hook_overlay": "1 AGENT. 7 TEAMS. 0 EMPLOYEES.",
+      "yt_title": "Fire Escape in Seconds! #Shorts",
+      "ig_caption": "Fire doesn’t give you minutes—it gives you seconds. 🔥 Save this 35-second escape protocol, walk your exit tonight, and send it to someone who needs a plan. Which step are you checking first? 👇 #FireSafety #KnowYourExit #EmergencyPreparedness #SafetyFirst #PreparedNotScared",
+      "hook_overlay": "SECONDS, NOT MINUTES",
       "council_score": 9.6,
       "council_models_used": [
         "openrouter:openrouter/auto",
@@ -33,10 +33,10 @@
         "openrouter:openrouter/auto",
         "openrouter:openai/gpt-4o-mini",
         "openrouter:openrouter/auto",
-        "openrouter:openrouter/auto"
+        "openrouter:openai/gpt-4o-mini"
       ],
       "contains_synthetic_media": true,
-      "source_url": "ai_faceless:How 1 Agent Runs 7 AI Teams"
+      "source_url": "ai_faceless:How to escape from fire in a building "
     }
   ]
 }

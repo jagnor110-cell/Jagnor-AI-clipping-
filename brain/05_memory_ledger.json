@@ -1,10 +1,11 @@
 {
   "spend_date_utc": "2026-11-19",
   "processed_items": [
-    "ai_faceless:how 1 agent runs 7 ai teams:20261119"
+    "ai_faceless:how 1 agent runs 7 ai teams:20261119",
+    "ai_faceless:how to escape from fire in a building:20261119"
   ],
   "allowlisted_channels": [],
-  "daily_spend_usd": 0.12,
+  "daily_spend_usd": 0.24,
   "daily_budget_cap_usd": 5.0,
   "publish_log": [],
   "history": [
@@ -16,6 +17,16 @@
       "summary": {
         "topic": "How 1 Agent Runs 7 AI Teams",
         "mp4_path": "jobs/latest/out/faceless_how_1_agent_runs_7_ai_te.mp4"
+      }
+    },
+    {
+      "timestamp": 1795108941,
+      "engine": "ai_faceless",
+      "item_key": "ai_faceless:how to escape from fire in a building:20261119",
+      "cost_usd": 0.12,
+      "summary": {
+        "topic": "How to escape from fire in a building ",
+        "mp4_path": "jobs/latest/out/faceless_how_to_escape_from_fire.mp4"
       }
     }
   ]
