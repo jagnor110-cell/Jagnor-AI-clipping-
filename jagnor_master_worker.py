@@ -1414,28 +1414,31 @@ class AICouncil:
     ) -> dict[str, Any]:
         """
         4-Brain Free AI Council for `--engine motion_story`:
-        Generates a universal character sheet (colors, silhouette, prop, aura) plus
-        5 animated 2D motion-graphic scenes (`hero_intro`, `scale_comparison`,
-        `action_flight`, `source_quote`, `zoom_callout`) for ANY topic or theme.
+        Generates topic-accurate visual_world (space/ocean/tech_ai/finance/history_myth/nature),
+        per-scene visual prompts & stock keywords, plus 5 animated 2D motion-graphic scenes
+        with clean short stats and auto-sized source quotes.
         """
-        char_hint = character_desc.strip() or f"An iconic, memorable protagonist suited to {topic} ({theme})"
+        style_desc = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
+        char_hint = character_desc.strip() or f"Topic-accurate central subject or protagonist for {topic}"
         s1 = self.invoke_stage(
             "gemini",
-            "You are Stage 1 (Gemini Story Architect). Write a gripping 5-scene 45-second 2D animated story script with a universal character sheet.",
-            f"Topic: {topic}\nTheme: {theme}\nArt Style: {art_style}\nLanguage: {language_hint}\n"
-            f"Character Hint: {char_hint}\nICP:\n{brain.identity_icp}\n"
-            "Design 1 consistent character (name, primary_hex, accent_hex, skin_hex, aura_hex, archetype: hero/scholar/warrior/astronaut/mystic/founder) "
-            "and 5 scenes using scene_type in [hero_intro, scale_comparison, action_flight, source_quote, zoom_callout]. "
-            "Each scene needs narration (14-20 words), top_label (<=5 words), metric_value (number or short stat), metric_unit, and quote_text (for source_quote).",
+            "You are Stage 1 (Gemini Story Architect). Write a gripping 5-scene 45-second animated explainer/story script that is 100% visually accurate to the topic.",
+            f"Topic: {topic}\nTheme: {theme}\nArt Style: {art_style} ({style_desc})\nLanguage: {language_hint}\n"
+            f"Subject/Character Hint: {char_hint}\nICP:\n{brain.identity_icp}\n"
+            "Pick visual_world from [space, ocean, tech_ai, finance, history_myth, nature]. "
+            "Design 5 scenes using scene_type in [hero_intro, scale_comparison, action_flight, source_quote, zoom_callout]. "
+            "For EVERY scene include: narration (14-20 words), top_label (<=4 words), visual_prompt (accurate to the topic & art style, no text), "
+            "stock_keywords (2-4 concrete real-world nouns spoken in THIS scene narration for exact Wikimedia/Pexels photo matching, unique per scene), metric_value (number), metric_unit (SHORT 1-2 words like KM, AU, YEARS, USD, %, X), "
+            "quote_title, quote_text (1-2 crisp sentences), and callout_label (<=3 words).",
         )
         s2 = self.invoke_stage(
             "groq",
-            "You are Stage 2 (Groq Viral Storyteller). Sharpen the opening 3-second hook, ensure every scene builds tension and ends with a comment-triggering question, and add `hook_overlay` + `ig_caption`.",
+            "You are Stage 2 (Groq Viral Storyteller). Sharpen the 3-second hook, keep every visual_prompt strictly accurate to the exact topic, end with a comment question, and add `hook_overlay` + `ig_caption`.",
             f"Topic: {topic} | Theme: {theme} | Language: {language_hint}\nGemini Draft:\n{s1 or topic}",
         )
         s3 = self.invoke_stage(
             "nvidia",
-            "You are Stage 3 (NVIDIA Nemotron Polish & SEO). Add a <=60-char `yt_title` with #Shorts, verify all hex colors are valid #RRGGBB, and add 3 hashtags to `ig_caption`.",
+            "You are Stage 3 (NVIDIA Nemotron Polish & SEO). Add a <=60-char `yt_title` with #Shorts, keep metric_unit <= 8 chars (e.g. AU, KM, YEARS, B KM), and add 3 hashtags to `ig_caption`.",
             f"Groq Draft:\n{s2 or topic}",
         )
         s4 = self.invoke_stage(
@@ -1443,8 +1446,10 @@ class AICouncil:
             "You are Stage 4 (OpenRouter Chief Consensus Judge). Output ONLY strict valid JSON.",
             f"Merge all 3 drafts:\nGemini:{s1}\nGroq:{s2}\nNVIDIA:{s3}\n"
             'Output ONLY valid JSON: {"hook_overlay": str, "yt_title": str, "ig_caption": str, '
-            '"character": {"name": str, "archetype": str, "primary_hex": str, "accent_hex": str, "skin_hex": str, "aura_hex": str, "backdrop_mood": str}, '
-            '"scenes": [{"scene_type": str, "narration": str, "top_label": str, "metric_value": float, "metric_unit": str, "quote_title": str, "quote_text": str, "callout_label": str}]} '
+            '"visual_world": str, '
+            '"character": {"name": str, "archetype": str, "primary_hex": str, "accent_hex": str, "skin_hex": str, "aura_hex": str}, '
+            '"scenes": [{"scene_type": str, "narration": str, "top_label": str, "visual_prompt": str, "stock_keywords": str, '
+            '"metric_value": float, "metric_unit": str, "quote_title": str, "quote_text": str, "callout_label": str}]} '
             "(exactly 5 scenes).",
         )
         parsed = (
@@ -1459,15 +1464,39 @@ class AICouncil:
             s = str(val or "").strip()
             return s if re.fullmatch(r"#[0-9a-fA-F]{6}", s) else default
 
+        def _clean_unit(val: Any) -> str:
+            raw = re.sub(r"\(.*?\)", "", str(val or "")).strip()
+            parts = raw.split()[:2]
+            out = " ".join(parts).upper()
+            return out if len(out) <= 10 else parts[0][:10].upper()
+
+        # Infer visual_world accurately from topic/theme if LLM omits or returns unknown value
+        low_ctx = f"{topic} {theme} {character_desc}".lower()
+        valid_worlds = {"space", "ocean", "tech_ai", "finance", "history_myth", "nature"}
+        v_world = str(parsed.get("visual_world") or "").strip().lower()
+        if v_world not in valid_worlds:
+            if any(k in low_ctx for k in ("space", "voyager", "planet", "mars", "star", "orbit", "galaxy", "nasa", "moon", "sun", "universe", "rocket")):
+                v_world = "space"
+            elif any(k in low_ctx for k in ("ocean", "sea", "mariana", "trench", "submarine", "whale", "deep water", "titanic")):
+                v_world = "ocean"
+            elif any(k in low_ctx for k in ("ai", "agent", "robot", "code", "algorithm", "software", "tech", "cyber", "computer")):
+                v_world = "tech_ai"
+            elif any(k in low_ctx for k in ("money", "stock", "billion", "wealth", "finance", "crypto", "business", "economy", "gold", "market")):
+                v_world = "finance"
+            elif any(k in low_ctx for k in ("myth", "ramayan", "hanuman", "king", "empire", "roman", "pyramid", "war", "ancient", "history", "god")):
+                v_world = "history_myth"
+            else:
+                v_world = "nature"
+
         raw_char = parsed.get("character") if isinstance(parsed.get("character"), dict) else {}
         character = {
-            "name": str(raw_char.get("name") or "The Protagonist")[:32],
+            "name": str(raw_char.get("name") or topic[:24])[:32],
             "archetype": str(raw_char.get("archetype") or "hero").lower(),
             "primary_hex": _safe_hex(raw_char.get("primary_hex"), "#D94A38"),
             "accent_hex": _safe_hex(raw_char.get("accent_hex"), "#F5C451"),
             "skin_hex": _safe_hex(raw_char.get("skin_hex"), "#C68642"),
             "aura_hex": _safe_hex(raw_char.get("aura_hex"), "#38BDF8"),
-            "backdrop_mood": str(raw_char.get("backdrop_mood") or "night_ocean").lower(),
+            "visual_world": v_world,
         }
 
         default_types = ["hero_intro", "scale_comparison", "action_flight", "source_quote", "zoom_callout"]
@@ -1483,23 +1512,28 @@ class AICouncil:
                         m_val = float(sc.get("metric_value") or 100)
                     except Exception:
                         m_val = 100.0
+                    unit = _clean_unit(sc.get("metric_unit") or "X")
                     scenes.append({
                         "scene_type": st,
                         "narration": str(sc["narration"]).strip(),
-                        "top_label": str(sc.get("top_label") or topic[:30]).strip().upper()[:38],
+                        "top_label": _trim_words(str(sc.get("top_label") or topic), 30).upper(),
+                        "visual_prompt": str(sc.get("visual_prompt") or f"{topic}, {theme}, {art_style}").strip(),
+                        "stock_keywords": str(sc.get("stock_keywords") or f"{v_world.replace('_', ' ')} {topic}")[:42].strip(),
                         "metric_value": m_val,
-                        "metric_unit": str(sc.get("metric_unit") or "X").strip().upper()[:14],
-                        "quote_title": str(sc.get("quote_title") or theme.upper()).strip()[:40],
+                        "metric_unit": unit,
+                        "quote_title": _trim_words(str(sc.get("quote_title") or theme), 34),
                         "quote_text": str(sc.get("quote_text") or sc["narration"]).strip()[:200],
-                        "callout_label": str(sc.get("callout_label") or f"{int(m_val)} {sc.get('metric_unit') or ''}").strip().upper()[:28],
+                        "callout_label": _trim_words(str(sc.get("callout_label") or f"{int(m_val)} {unit}"), 22).upper(),
                     })
 
         if len(scenes) < 3:
             scenes = [
                 {
                     "scene_type": "hero_intro",
-                    "narration": f"Most people never realize the true scale behind {topic} until you see the numbers side by side.",
-                    "top_label": topic[:32].upper(),
+                    "narration": f"Most people never realize the true scale behind {topic} until you see it visualized.",
+                    "top_label": _trim_words(topic, 28).upper(),
+                    "visual_prompt": f"cinematic establishing shot of {topic}, {theme}",
+                    "stock_keywords": f"{v_world.replace('_', ' ')} dramatic",
                     "metric_value": 3.0,
                     "metric_unit": "X SCALE",
                     "quote_title": theme.upper(),
@@ -1508,38 +1542,46 @@ class AICouncil:
                 },
                 {
                     "scene_type": "scale_comparison",
-                    "narration": "Step by step, the scale climbs past every ordinary benchmark we picture in our heads.",
+                    "narration": "Step by step, the numbers climb far beyond what our brains can picture at a glance.",
                     "top_label": "THE REAL SCALE",
+                    "visual_prompt": f"epic scale comparison visual for {topic}, {theme}",
+                    "stock_keywords": f"{v_world.replace('_', ' ')} vast",
                     "metric_value": 1000.0,
-                    "metric_unit": "UNITS",
+                    "metric_unit": "KM",
                     "quote_title": theme.upper(),
                     "quote_text": "",
-                    "callout_label": "1000 UNITS",
+                    "callout_label": "1000 KM",
                 },
                 {
                     "scene_type": "action_flight",
-                    "narration": "At the turning point of the story, pure speed and precision outmaneuver brute force in a single blink.",
-                    "top_label": "THE TURNING POINT",
+                    "narration": "At the defining moment of this journey, momentum carries it past every known boundary.",
+                    "top_label": "BEYOND THE LIMIT",
+                    "visual_prompt": f"dynamic motion scene of {topic} crossing a boundary, {theme}",
+                    "stock_keywords": f"{v_world.replace('_', ' ')} motion",
                     "metric_value": 90.0,
                     "metric_unit": "SPEED",
                     "quote_title": theme.upper(),
                     "quote_text": "",
-                    "callout_label": "CRITICAL MOVE",
+                    "callout_label": "BOUNDARY CROSSED",
                 },
                 {
                     "scene_type": "source_quote",
-                    "narration": f"The original record of {topic} spells out every detail clearly, leaving nothing to guesswork.",
+                    "narration": f"The documented record of {topic} captures just how extraordinary this milestone really is.",
                     "top_label": "THE RECORD",
+                    "visual_prompt": f"atmospheric dramatic backdrop for {topic}, {theme}",
+                    "stock_keywords": f"{v_world.replace('_', ' ')} dark",
                     "metric_value": 1.0,
-                    "metric_unit": "SOURCE",
-                    "quote_title": f"{theme.upper()} ARCHIVE",
-                    "quote_text": f"In the classic account of {topic}, scale and wisdom work together to overcome an impossible obstacle.",
-                    "callout_label": "VERIFIED RECORD",
+                    "metric_unit": "FACT",
+                    "quote_title": f"{theme.upper()} RECORD",
+                    "quote_text": f"The documented story of {topic} shows how far beyond ordinary limits reality can reach.",
+                    "callout_label": "VERIFIED FACT",
                 },
                 {
                     "scene_type": "zoom_callout",
-                    "narration": f"Did you know this hidden detail about {topic}? Tell me your take in the comments below.",
+                    "narration": f"Did you know this detail about {topic}? Drop your answer in the comments below.",
                     "top_label": "WHAT DO YOU THINK?",
+                    "visual_prompt": f"awe-inspiring finale shot of {topic}, {theme}",
+                    "stock_keywords": f"{v_world.replace('_', ' ')} horizon",
                     "metric_value": 100.0,
                     "metric_unit": "% REAL",
                     "quote_title": theme.upper(),
@@ -1549,9 +1591,10 @@ class AICouncil:
             ]
 
         return {
-            "hook_overlay": str(parsed.get("hook_overlay") or topic[:36]).upper()[:42],
+            "hook_overlay": _trim_words(str(parsed.get("hook_overlay") or topic), 36).upper(),
             "yt_title": str(parsed.get("yt_title") or f"{topic[:48]} #Shorts")[:100],
-            "ig_caption": str(parsed.get("ig_caption") or f"{topic} — animated story breakdown. Tell us your thoughts in the comments! #Story #Animation #Shorts"),
+            "ig_caption": str(parsed.get("ig_caption") or f"{topic} — animated breakdown. Tell us your take in the comments! #Story #Shorts #Facts"),
+            "visual_world": v_world,
             "character": character,
             "scenes": scenes,
             "art_style": art_style,
@@ -2978,6 +3021,128 @@ def _trim_words(text: str, max_chars: int = 58) -> str:
     return (cut or clean[:max_chars]) + "..."
 
 
+def _extract_narration_search_query(narration: str, explicit_query: str, topic: str) -> str:
+    """
+    Ensures every scene's visual search query stays tightly locked to the exact concrete
+    subject spoken in that scene's narration (never generic random filler).
+    """
+    q = " ".join(re.sub(r"[^a-zA-Z0-9\s\-]+", " ", str(explicit_query or "")).split()).strip()
+    if len(q.split()) >= 2:
+        return q[:64]
+    stopwords = {
+        "the", "and", "for", "that", "this", "with", "from", "into", "your", "they", "them",
+        "their", "what", "when", "where", "which", "about", "there", "these", "those", "most",
+        "people", "never", "really", "just", "over", "under", "still", "every", "single",
+        "would", "could", "should", "have", "been", "were", "will", "more", "than", "then",
+    }
+    words = [w for w in re.findall(r"[A-Za-z0-9\-]+", narration) if len(w) > 3 and w.lower() not in stopwords]
+    base_topic = " ".join(topic.split()[:3])
+    picked = " ".join(words[:3])
+    return f"{base_topic} {picked}".strip()[:64] or topic[:64]
+
+
+def _center_crop_9x16(im: Image.Image, out_img: Path) -> None:
+    rgb = im.convert("RGB")
+    w, h = rgb.size
+    target_ratio = 9.0 / 16.0
+    cur_ratio = w / float(max(h, 1))
+    if cur_ratio > target_ratio:
+        new_w = int(h * target_ratio)
+        x0 = max(0, (w - new_w) // 2)
+        rgb = rgb.crop((x0, 0, x0 + new_w, h))
+    else:
+        new_h = int(w / target_ratio)
+        y0 = max(0, (h - new_h) // 2)
+        rgb = rgb.crop((0, y0, w, y0 + new_h))
+    rgb.resize((1080, 1920), Image.Resampling.LANCZOS).save(out_img, format="PNG")
+
+
+def _fetch_wikimedia_topic_image(query: str, out_img: Path, scene_num: int, used_urls: set[str] | None = None) -> bool:
+    """
+    Fetches real, topic-accurate public-domain / CC photographs matching the exact scene
+    narration from Wikimedia Commons (100% free, zero API key, zero watermarks).
+    """
+    clean_q = " ".join(re.sub(r"[^a-zA-Z0-9\s\-]+", " ", query).split()).strip()
+    if not clean_q:
+        return False
+    api_url = (
+        "https://commons.wikimedia.org/w/api.php?"
+        + urllib.parse.urlencode({
+            "action": "query",
+            "generator": "search",
+            "gsrnamespace": "6",
+            "gsrsearch": f"{clean_q} filetype:bitmap",
+            "gsrlimit": "10",
+            "prop": "imageinfo",
+            "iiprop": "url|mime|size",
+            "iiurlwidth": "1200",
+            "format": "json",
+        })
+    )
+    try:
+        req = urllib.request.Request(
+            api_url,
+            headers={"User-Agent": "JagnorAIStudio/2.0 (https://github.com/jagnor110-cell)"},
+        )
+        raw, _ = urlopen_with_retry(req, timeout=20, max_attempts=2)
+        data = json.loads(raw.decode("utf-8"))
+        pages = list((data.get("query") or {}).get("pages", {}).values())
+        if not pages:
+            return False
+
+        candidates: list[tuple[int, str]] = []
+        for p in pages:
+            title_low = str(p.get("title") or "").lower()
+            if any(bad in title_low for bad in (".svg", ".pdf", ".tif", "logo", "icon", "flag_of", "diagram_blank", "map_blank")):
+                continue
+            infos = p.get("imageinfo") or []
+            if not infos:
+                continue
+            info = infos[0]
+            mime = str(info.get("mime") or "")
+            if mime not in {"image/jpeg", "image/png", "image/webp"}:
+                continue
+            w = int(info.get("width") or 0)
+            h = int(info.get("height") or 0)
+            if w < 500 or h < 500:
+                continue
+            img_url = str(info.get("thumburl") or info.get("url") or "")
+            if not img_url:
+                continue
+            if used_urls is not None and img_url in used_urls:
+                continue
+            # Prefer portrait/square high-res photos over ultra-wide panoramas
+            aspect_penalty = 0 if (h / float(max(w, 1))) >= 0.65 else -5000
+            candidates.append((w * h + aspect_penalty, img_url))
+
+        if not candidates:
+            return False
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        chosen_url = candidates[0][1]
+
+        img_req = urllib.request.Request(
+            chosen_url,
+            headers={"User-Agent": "JagnorAIStudio/2.0 (https://github.com/jagnor110-cell)"},
+        )
+        with urllib.request.urlopen(img_req, timeout=25) as resp:
+            img_bytes = resp.read()
+        if len(img_bytes) < 12000:
+            return False
+
+        tmp_img = out_img.with_suffix(".wiki.img")
+        tmp_img.write_bytes(img_bytes)
+        with Image.open(tmp_img) as im:
+            _center_crop_9x16(im, out_img)
+        tmp_img.unlink(missing_ok=True)
+        if used_urls is not None:
+            used_urls.add(chosen_url)
+        log.info("Scene %d real topic photo loaded from Wikimedia Commons (%s).", scene_num, clean_q[:36])
+        return True
+    except Exception as exc:
+        log.info("Scene %d Wikimedia Commons lookup unavailable (%s).", scene_num, exc)
+        return False
+
+
 def _fetch_pexels_portrait_image(keywords: str, out_img: Path, scene_num: int) -> bool:
     """Fetches a free, watermark-free 9:16 portrait HD photo from Pexels API (`PEXELS_API_KEY`)."""
     pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
@@ -3102,6 +3267,9 @@ def _fetch_free_ai_scene_image(
                 time.sleep(4.0 * attempt)
 
     if _fetch_pexels_portrait_image(stock_keywords or visual_prompt, out_img, scene_num):
+        return out_img
+
+    if _fetch_wikimedia_topic_image(stock_keywords or fallback_headline, out_img, scene_num):
         return out_img
 
     log.info("Scene %d image APIs unavailable (%s); rendering branded fallback visual.", scene_num, last_exc)
@@ -3427,107 +3595,6 @@ def _build_gradient_backdrop(width: int, height: int, mood: str, scene_idx: int)
     return img
 
 
-def _draw_universal_character(
-    draw: ImageDraw.ImageDraw,
-    cx: float,
-    base_y: float,
-    scale: float,
-    char: dict[str, str],
-    phase: float,
-    flying: bool = False,
-) -> None:
-    """
-    Universal 2D procedural vector character renderer (works for ANY theme or genre):
-    Supports hero, warrior, scholar, astronaut, mystic, and founder silhouettes with
-    smooth breathing bob, cape/aura pulse, and flying/action pose.
-    """
-    primary = _hex_to_rgb(char.get("primary_hex", "#D94A38"), (217, 74, 56))
-    accent = _hex_to_rgb(char.get("accent_hex", "#F5C451"), (245, 196, 81))
-    skin = _hex_to_rgb(char.get("skin_hex", "#C68642"), (198, 134, 66))
-    aura = _hex_to_rgb(char.get("aura_hex", "#38BDF8"), (56, 189, 248))
-    archetype = char.get("archetype", "hero")
-    outline = (245, 238, 224)
-
-    bob = math.sin(phase * 2.0 * math.pi) * (8.0 * scale)
-    y0 = base_y + bob
-    s = max(0.25, scale)
-
-    # Subtle glowing aura halo behind character
-    halo_r = int(120 * s * (1.0 + 0.05 * math.sin(phase * 4.0 * math.pi)))
-    draw.ellipse(
-        (cx - halo_r, y0 - 260 * s - halo_r * 0.6, cx + halo_r, y0 - 260 * s + halo_r * 0.6),
-        outline=aura,
-        width=max(2, int(3 * s)),
-    )
-
-    # Flowing cape / cloak / energy tail behind torso
-    sway = math.sin(phase * 2.0 * math.pi) * (24 * s)
-    if archetype in {"hero", "warrior", "mystic"}:
-        cape_pts = [
-            (cx - 58 * s, y0 - 300 * s),
-            (cx + 58 * s, y0 - 300 * s),
-            (cx + 92 * s + sway, y0 - 70 * s),
-            (cx - 92 * s + sway, y0 - 70 * s),
-        ]
-        draw.polygon(cape_pts, fill=tuple(max(0, c - 45) for c in primary), outline=accent)
-
-    # Legs / lower garment
-    leg_w = 34 * s
-    if flying:
-        draw.rounded_rectangle((cx - 48 * s, y0 - 150 * s, cx + 48 * s, y0 - 60 * s), radius=int(12 * s), fill=primary, outline=outline, width=max(1, int(2 * s)))
-    else:
-        draw.rounded_rectangle((cx - 46 * s, y0 - 155 * s, cx - 6 * s, y0), radius=int(10 * s), fill=skin, outline=outline, width=max(1, int(2 * s)))
-        draw.rounded_rectangle((cx + 6 * s, y0 - 155 * s, cx + 46 * s, y0), radius=int(10 * s), fill=skin, outline=outline, width=max(1, int(2 * s)))
-        # Lower tunic / robe / trousers
-        draw.rounded_rectangle((cx - 56 * s, y0 - 190 * s, cx + 56 * s, y0 - 70 * s), radius=int(14 * s), fill=primary, outline=outline, width=max(1, int(2 * s)))
-
-    # Torso
-    torso_fill = primary if archetype in {"astronaut", "founder", "scholar"} else skin
-    draw.rounded_rectangle(
-        (cx - 62 * s, y0 - 325 * s, cx + 62 * s, y0 - 180 * s),
-        radius=int(24 * s),
-        fill=torso_fill,
-        outline=outline,
-        width=max(2, int(3 * s)),
-    )
-    # Accent emblem / chest band / collar
-    draw.arc(
-        (cx - 42 * s, y0 - 320 * s, cx + 42 * s, y0 - 255 * s),
-        start=15, end=165, fill=accent, width=max(2, int(5 * s)),
-    )
-
-    # Arms with gentle animated sway
-    arm_sway = math.sin(phase * 2.0 * math.pi) * (10 * s)
-    if flying:
-        # Arms stretched forward/upward
-        draw.rounded_rectangle((cx - 120 * s, y0 - 340 * s + arm_sway, cx - 55 * s, y0 - 295 * s + arm_sway), radius=int(10 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
-        draw.rounded_rectangle((cx + 55 * s, y0 - 340 * s - arm_sway, cx + 120 * s, y0 - 295 * s - arm_sway), radius=int(10 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
-    else:
-        draw.rounded_rectangle((cx - 94 * s, y0 - 315 * s, cx - 60 * s, y0 - 165 * s + arm_sway), radius=int(12 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
-        draw.rounded_rectangle((cx + 60 * s, y0 - 315 * s, cx + 94 * s, y0 - 165 * s - arm_sway), radius=int(12 * s), fill=torso_fill, outline=outline, width=max(1, int(2 * s)))
-        # Wrist cuffs
-        draw.rectangle((cx - 94 * s, y0 - 185 * s + arm_sway, cx - 60 * s, y0 - 175 * s + arm_sway), fill=accent)
-        draw.rectangle((cx + 60 * s, y0 - 185 * s - arm_sway, cx + 94 * s, y0 - 175 * s - arm_sway), fill=accent)
-
-    # Head
-    head_r = 46 * s
-    hy = y0 - 372 * s
-    draw.ellipse((cx - head_r, hy - head_r, cx + head_r, hy + head_r), fill=skin, outline=outline, width=max(2, int(3 * s)))
-    if archetype == "astronaut":
-        draw.ellipse((cx - head_r * 1.15, hy - head_r * 1.15, cx + head_r * 1.15, hy + head_r * 1.15), outline=(220, 240, 255), width=max(2, int(4 * s)))
-        draw.rounded_rectangle((cx - 30 * s, hy - 18 * s, cx + 30 * s, hy + 12 * s), radius=int(10 * s), fill=(28, 42, 68), outline=accent, width=max(1, int(2 * s)))
-    else:
-        # Expressive eyes + brow + crown/headband accent
-        eye_y = hy - 6 * s
-        draw.ellipse((cx - 22 * s, eye_y - 7 * s, cx - 8 * s, eye_y + 7 * s), fill=(255, 255, 255))
-        draw.ellipse((cx + 8 * s, eye_y - 7 * s, cx + 22 * s, eye_y + 7 * s), fill=(255, 255, 255))
-        draw.ellipse((cx - 18 * s, eye_y - 4 * s, cx - 12 * s, eye_y + 4 * s), fill=(20, 24, 34))
-        draw.ellipse((cx + 12 * s, eye_y - 4 * s, cx + 18 * s, eye_y + 4 * s), fill=(20, 24, 34))
-        draw.arc((cx - 16 * s, hy + 6 * s, cx + 16 * s, hy + 24 * s), start=10, end=170, fill=(55, 32, 22), width=max(2, int(3 * s)))
-        # Crown / headband / hair crest
-        draw.arc((cx - head_r * 0.9, hy - head_r * 0.9, cx + head_r * 0.9, hy - head_r * 0.1), start=190, end=350, fill=accent, width=max(2, int(6 * s)))
-
-
 def _load_font(size: int, bold: bool = False, text_sample: str = "") -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
     has_malayalam = any("\u0d00" <= ch <= "\u0d7f" for ch in text_sample)
     has_devanagari = any("\u0900" <= ch <= "\u097f" for ch in text_sample)
@@ -3573,13 +3640,177 @@ def _fit_font(
     min_size: int = 24,
     bold: bool = True,
 ) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    """Auto-shrinks font size so wide headlines/stats never clip off the 1080px screen."""
     for sz in range(start_size, min_size - 1, -4):
         fnt = _load_font(sz, bold=bold, text_sample=text)
         bbox = draw.textbbox((0, 0), text, font=fnt)
         if (bbox[2] - bbox[0]) <= max_width:
             return fnt
     return _load_font(min_size, bold=bold, text_sample=text)
+
+
+def _draw_topic_subject(
+    draw: ImageDraw.ImageDraw,
+    visual_world: str,
+    cx: float,
+    cy: float,
+    scale: float,
+    char: dict[str, str],
+    phase: float,
+    flying: bool = False,
+) -> None:
+    """
+    Draws a clean, topic-accurate 2D vector centerpiece so every topic gets the right visual:
+      - `space`        : Voyager-style golden parabolic spacecraft + antenna + glowing thrusters
+      - `ocean`        : Deep-sea exploration submersible + glowing headlight beam + bubbles
+      - `tech_ai`      : Glowing neural core + orbiting satellite nodes + circuit rings
+      - `finance`      : Animated rising gold market bars + luminous upward trend arrow
+      - `history_myth` / `nature` : Sleek Kurzgesagt-style illustrated protagonist silhouette (no boxy blocks)
+    """
+    primary = _hex_to_rgb(char.get("primary_hex", "#D94A38"), (217, 74, 56))
+    accent = _hex_to_rgb(char.get("accent_hex", "#F5C451"), (245, 196, 81))
+    skin = _hex_to_rgb(char.get("skin_hex", "#C68642"), (198, 134, 66))
+    aura = _hex_to_rgb(char.get("aura_hex", "#38BDF8"), (56, 189, 248))
+    s = max(0.35, scale)
+    bob = math.sin(phase * 2.0 * math.pi) * (10.0 * s)
+    y = cy + bob
+
+    if visual_world == "space":
+        # Voyager-style deep-space probe: high-gain dish, golden record disc, long booms
+        draw.ellipse((cx - 115 * s, y - 220 * s, cx + 115 * s, y - 140 * s), fill=(228, 236, 248), outline=aura, width=max(2, int(4 * s)))
+        draw.ellipse((cx - 38 * s, y - 196 * s, cx + 38 * s, y - 164 * s), fill=(52, 68, 96))
+        # Central hexagonal bus
+        bus = [(cx - 58 * s, y - 140 * s), (cx + 58 * s, y - 140 * s), (cx + 46 * s, y - 62 * s), (cx - 46 * s, y - 62 * s)]
+        draw.polygon(bus, fill=(38, 48, 72), outline=(190, 210, 235))
+        # Golden Record emblem on spacecraft side
+        draw.ellipse((cx - 26 * s, y - 126 * s, cx + 26 * s, y - 74 * s), fill=accent, outline=(255, 246, 200), width=max(2, int(3 * s)))
+        draw.ellipse((cx - 7 * s, y - 107 * s, cx + 7 * s, y - 93 * s), fill=(38, 48, 72))
+        # Magnetometer & RTG booms
+        draw.line((cx - 54 * s, y - 104 * s, cx - 195 * s, y - 65 * s), fill=(180, 200, 225), width=max(2, int(4 * s)))
+        draw.line((cx + 54 * s, y - 104 * s, cx + 185 * s, y - 145 * s), fill=(180, 200, 225), width=max(2, int(4 * s)))
+        draw.ellipse((cx - 205 * s, y - 75 * s, cx - 185 * s, y - 55 * s), fill=aura)
+        # Subtle thruster glow
+        glow = int(18 * s * (0.85 + 0.25 * math.sin(phase * 6.0 * math.pi)))
+        draw.ellipse((cx - glow, y - 60 * s, cx + glow, y - 60 * s + glow * 2), fill=aura)
+
+    elif visual_world == "ocean":
+        # Sleek deep-sea submersible + searchlight cone + rising bubbles
+        beam = [(cx + 85 * s, y - 135 * s), (cx + 340 * s, y - 220 * s), (cx + 340 * s, y - 50 * s)]
+        draw.polygon(beam, fill=(48, 128, 178))
+        draw.rounded_rectangle((cx - 125 * s, y - 185 * s, cx + 110 * s, y - 85 * s), radius=int(48 * s), fill=accent, outline=(250, 245, 225), width=max(2, int(4 * s)))
+        draw.rounded_rectangle((cx - 42 * s, y - 225 * s, cx + 28 * s, y - 175 * s), radius=int(14 * s), fill=primary, outline=(250, 245, 225), width=max(2, int(3 * s)))
+        # Glass viewport dome
+        draw.ellipse((cx + 22 * s, y - 165 * s, cx + 82 * s, y - 105 * s), fill=(26, 62, 108), outline=(185, 232, 255), width=max(2, int(4 * s)))
+        # Rising bubbles
+        for bi in range(4):
+            bx = cx - 135 * s - bi * 18 * s
+            by = y - 120 * s - ((phase * 140 + bi * 35) % 140) * s
+            br = max(3, int((8 - bi) * s))
+            draw.ellipse((bx - br, by - br, bx + br, by + br), outline=(185, 232, 255), width=2)
+
+    elif visual_world == "tech_ai":
+        # Glowing AI neural core + orbiting nodes
+        r_outer = int(118 * s)
+        r_inner = int(58 * s)
+        draw.ellipse((cx - r_outer, y - 160 * s - r_outer, cx + r_outer, y - 160 * s + r_outer), outline=aura, width=max(2, int(4 * s)))
+        draw.ellipse((cx - r_inner, y - 160 * s - r_inner, cx + r_inner, y - 160 * s + r_inner), fill=(22, 42, 76), outline=accent, width=max(3, int(5 * s)))
+        for ni in range(6):
+            ang = phase * 2.0 * math.pi + ni * (math.pi / 3.0)
+            nx = cx + math.cos(ang) * r_outer
+            ny = (y - 160 * s) + math.sin(ang) * r_outer
+            draw.line((cx, y - 160 * s, nx, ny), fill=aura, width=max(1, int(2 * s)))
+            draw.ellipse((nx - 14 * s, ny - 14 * s, nx + 14 * s, ny + 14 * s), fill=accent, outline=(255, 255, 255), width=2)
+
+    elif visual_world == "finance":
+        # Animated rising gold bars + glowing upward arrow
+        bar_heights = [90, 145, 200, 275]
+        for bi, bh in enumerate(bar_heights):
+            cur_h = bh * s * min(1.0, 0.35 + phase * 0.9)
+            bx = cx - 130 * s + bi * 74 * s
+            col = accent if bi == 3 else aura
+            draw.rounded_rectangle((bx, y - cur_h, bx + 52 * s, y), radius=int(8 * s), fill=col, outline=(245, 248, 255), width=2)
+        draw.line((cx - 130 * s, y - 110 * s, cx + 135 * s, y - 305 * s), fill=accent, width=max(3, int(6 * s)))
+
+    else:
+        # Sleek Kurzgesagt-style minimalist illustrated protagonist (clean proportions, no boxy stomach smiley)
+        halo_r = int(120 * s * (1.0 + 0.04 * math.sin(phase * 4.0 * math.pi)))
+        draw.ellipse((cx - halo_r, y - 240 * s - halo_r * 0.7, cx + halo_r, y - 240 * s + halo_r * 0.7), outline=aura, width=max(2, int(3 * s)))
+        sway = math.sin(phase * 2.0 * math.pi) * (20 * s)
+        # Flowing cloak silhouette
+        cloak = [(cx - 52 * s, y - 275 * s), (cx + 52 * s, y - 275 * s), (cx + 88 * s + sway, y - 35 * s), (cx - 88 * s + sway, y - 35 * s)]
+        draw.polygon(cloak, fill=tuple(max(0, c - 45) for c in primary), outline=accent)
+        # Tapered torso & lower tunic
+        torso = [(cx - 52 * s, y - 278 * s), (cx + 52 * s, y - 278 * s), (cx + 38 * s, y - 150 * s), (cx - 38 * s, y - 150 * s)]
+        draw.polygon(torso, fill=primary, outline=(245, 240, 230))
+        if not flying:
+            draw.rounded_rectangle((cx - 34 * s, y - 155 * s, cx - 6 * s, y), radius=int(10 * s), fill=tuple(max(0, c - 25) for c in primary))
+            draw.rounded_rectangle((cx + 6 * s, y - 155 * s, cx + 34 * s, y), radius=int(10 * s), fill=tuple(max(0, c - 25) for c in primary))
+        # Diagonal sash / scarf accent
+        draw.line((cx - 46 * s, y - 272 * s, cx + 36 * s, y - 158 * s), fill=accent, width=max(3, int(8 * s)))
+        # Clean rounded head + minimal glowing eyes (no awkward mouth)
+        hr = 42 * s
+        hy = y - 328 * s
+        draw.ellipse((cx - hr, hy - hr, cx + hr, hy + hr), fill=skin, outline=(245, 240, 230), width=max(2, int(3 * s)))
+        draw.ellipse((cx - 18 * s, hy - 8 * s, cx - 8 * s, hy + 2 * s), fill=(255, 255, 255))
+        draw.ellipse((cx + 8 * s, hy - 8 * s, cx + 18 * s, hy + 2 * s), fill=(255, 255, 255))
+        draw.arc((cx - hr * 0.9, hy - hr * 0.9, cx + hr * 0.9, hy - hr * 0.15), start=195, end=345, fill=accent, width=max(2, int(6 * s)))
+
+
+def _fetch_story_backdrop_if_available(
+    scene: dict[str, Any],
+    art_style: str,
+    scene_num: int,
+    tmp_dir: Path,
+    topic: str = "",
+    used_urls: set[str] | None = None,
+) -> Image.Image | None:
+    """
+    Fetches a real, narration-matched 1080x1920 visual for this exact scene in priority order:
+      1) Pollinations.ai (`POLLINATIONS_API_KEY`) locked to scene narration + art_style
+      2) Pexels HD Portrait Photos (`PEXELS_API_KEY`) matched to exact scene keywords
+      3) Wikimedia Commons real public-domain/CC photography (100% free, zero API key)
+    Darkens slightly for crisp animated HUD/caption contrast; returns None only if offline.
+    """
+    tmp_png = tmp_dir / f"story_bg_{scene_num:02d}.png"
+    narration = str(scene.get("narration") or "")
+    vp = str(scene.get("visual_prompt") or "")
+    sk = _extract_narration_search_query(narration, str(scene.get("stock_keywords") or ""), topic or str(scene.get("top_label") or ""))
+
+    poll_key = os.environ.get("POLLINATIONS_API_KEY", "").strip()
+    pexels_key = os.environ.get("PEXELS_API_KEY", "").strip()
+    loaded = False
+
+    if poll_key:
+        style_suffix = ART_STYLE_PROMPTS.get(art_style, ART_STYLE_PROMPTS["dark_cinematic"])
+        encoded = urllib.parse.quote(f"{vp or sk}, {style_suffix}, vertical 9:16 composition")
+        url = f"https://gen.pollinations.ai/image/{encoded}?width=1080&height=1920&model=flux&nologo=true&seed={scene_num * 211}"
+        try:
+            req = urllib.request.Request(url, headers={"Authorization": f"Bearer {poll_key}", "User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=40) as resp:
+                raw = resp.read()
+            if len(raw) > 10000:
+                tmp_jpg = tmp_png.with_suffix(".jpg")
+                tmp_jpg.write_bytes(raw)
+                with Image.open(tmp_jpg) as im:
+                    rgb = im.convert("RGB")
+                    w, h = rgb.size
+                    rgb.crop((0, 0, w, int(h * 0.94))).resize((1080, 1920), Image.Resampling.LANCZOS).save(tmp_png, format="PNG")
+                tmp_jpg.unlink(missing_ok=True)
+                loaded = True
+        except Exception as exc:
+            log.info("Story scene %d Pollinations backdrop skipped (%s).", scene_num, exc)
+
+    if not loaded and pexels_key:
+        loaded = _fetch_pexels_portrait_image(sk, tmp_png, scene_num)
+
+    # Free zero-key real-world photo match from Wikimedia Commons (NASA, history, science, landmarks)
+    if not loaded:
+        loaded = _fetch_wikimedia_topic_image(sk, tmp_png, scene_num, used_urls=used_urls)
+
+    if loaded and tmp_png.exists():
+        with Image.open(tmp_png) as im:
+            arr = np.asarray(im.convert("RGB"), dtype=np.float32) * 0.62
+            return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), mode="RGB")
+    return None
 
 
 def _render_motion_story_scene(
@@ -3590,15 +3821,22 @@ def _render_motion_story_scene(
     wav_path: Path,
     out_mp4: Path,
     fps: int = 24,
+    art_style: str = "dark_cinematic",
+    tmp_dir: Path | None = None,
+    topic: str = "",
+    used_urls: set[str] | None = None,
 ) -> None:
     """
-    Streams 1080x1920 24fps procedural 2D vector animation frames directly into FFmpeg
-    (zero intermediate PNG bloat): rippling water, ticking counters, scale rulers,
-    flying universal character, parchment quote cards, and circular zoom callouts.
+    Streams 1080x1920 24fps topic-accurate animation frames directly into FFmpeg:
+    - Uses real AI/Pexels topic backdrops with smooth Ken Burns zoom when keys are set,
+      OR topic-matched procedural 2D vector worlds (`space`, `ocean`, `tech_ai`, `finance`, `history_myth`, `nature`).
+    - Overlays crisp animated HUD graphics: scale rulers, ticking counters, auto-sized
+      parchment quote cards, and rim-anchored circular magnifier callouts.
     """
     W, H = 1080, 1920
     n_frames = max(48, int(round(dur * fps)))
     scene_type = scene.get("scene_type", "hero_intro")
+    visual_world = character.get("visual_world", "space")
     top_label = str(scene.get("top_label") or "").upper()
     metric_val = float(scene.get("metric_value") or 100.0)
     metric_unit = str(scene.get("metric_unit") or "").upper()
@@ -3606,7 +3844,10 @@ def _render_motion_story_scene(
     quote_text = str(scene.get("quote_text") or scene.get("narration") or "")
     callout_label = str(scene.get("callout_label") or "")
 
-    bg_base = _build_gradient_backdrop(W, H, character.get("backdrop_mood", "night_ocean"), scene_idx)
+    photo_bg = _fetch_story_backdrop_if_available(scene, art_style, scene_idx + 1, tmp_dir or out_mp4.parent, topic=topic, used_urls=used_urls)
+    bg_base = photo_bg if photo_bg is not None else _build_gradient_backdrop(W, H, visual_world, scene_idx)
+    has_photo_bg = photo_bg is not None
+
     sample_all = f"{top_label} {quote_title} {quote_text} {callout_label}"
     font_med = _load_font(38, bold=True, text_sample=sample_all)
     font_body = _load_font(34, bold=False, text_sample=sample_all)
@@ -3629,81 +3870,81 @@ def _render_motion_story_scene(
     try:
         for f_idx in range(n_frames):
             t = f_idx / float(max(n_frames - 1, 1))
-            frame = bg_base.copy()
+            if has_photo_bg:
+                # Smooth 1.00x -> 1.12x Ken Burns zoom on real topic-accurate AI/Pexels artwork
+                z = 1.0 + 0.12 * t
+                cw, ch = int(W / z), int(H / z)
+                x0, y0 = (W - cw) // 2, (H - ch) // 2
+                frame = bg_base.crop((x0, y0, x0 + cw, y0 + ch)).resize((W, H), Image.Resampling.BILINEAR)
+            else:
+                frame = bg_base.copy()
             draw = ImageDraw.Draw(frame)
 
-            # Animated horizon water / ground lines (bottom 26% of frame)
-            water_y = int(H * 0.74)
-            draw.rectangle((0, water_y, W, H), fill=(12, 22, 46))
-            for wi in range(14):
-                wy = water_y + 18 + wi * 34
-                shift = int(math.sin(t * 2.0 * math.pi + wi * 0.7) * 45)
-                draw.line((80 + shift, wy, 360 + shift, wy), fill=(72, 102, 148), width=3)
-                draw.line((540 - shift, wy + 12, 960 - shift, wy + 12), fill=(60, 88, 134), width=2)
+            horizon_y = int(H * 0.74)
+            # Only draw water/ground horizon when procedural & appropriate to the world (not in deep space!)
+            if not has_photo_bg:
+                if visual_world == "space":
+                    # Distant planet curvature & subtle orbital grid
+                    draw.ellipse((-320, horizon_y + 10, W + 320, H + 520), fill=(18, 36, 74), outline=aura_rgb, width=4)
+                    draw.arc((-140, horizon_y - 160, W + 140, H + 180), start=205, end=335, fill=(75, 110, 165), width=2)
+                elif visual_world in {"ocean", "history_myth", "nature"}:
+                    draw.rectangle((0, horizon_y, W, H), fill=(12, 22, 46))
+                    for wi in range(12):
+                        wy = horizon_y + 22 + wi * 38
+                        shift = int(math.sin(t * 2.0 * math.pi + wi * 0.7) * 40)
+                        draw.line((80 + shift, wy, 360 + shift, wy), fill=(72, 102, 148), width=3)
+                        draw.line((560 - shift, wy + 12, 960 - shift, wy + 12), fill=(60, 88, 134), width=2)
+                else:
+                    # Sleek dark tech/finance studio floor grid
+                    draw.rectangle((0, horizon_y, W, H), fill=(14, 18, 32))
+                    for gi in range(6):
+                        gy = horizon_y + gi * 70
+                        draw.line((0, gy, W, gy), fill=(36, 54, 88), width=2)
 
             if scene_type == "hero_intro":
-                # Character rises smoothly from water with concentric ripple rings
-                char_scale = 0.85 + 0.35 * min(1.0, t * 1.4)
-                cx, base_y = W * 0.5, water_y + 40
-                for ri in range(3):
-                    rr = int((90 + ri * 48 + (t * 60)) % 220)
-                    draw.ellipse((cx - rr, base_y - 22, cx + rr, base_y + 22), outline=(190, 215, 245), width=3)
-                _draw_universal_character(draw, cx, base_y, char_scale, character, phase=t)
-                # Animated scale ruler lines (x1, x2, x3) appearing smoothly
-                if t > 0.35:
-                    ruler_t = min(1.0, (t - 0.35) / 0.45)
-                    ry_top = int(base_y - 540 * ruler_t)
-                    draw.line((130, base_y, 130, ry_top), fill=accent_rgb, width=4)
+                if not has_photo_bg:
+                    subj_scale = 0.85 + 0.25 * min(1.0, t * 1.4)
+                    _draw_topic_subject(draw, visual_world, W * 0.5, horizon_y + 10, subj_scale, character, phase=t)
+                if t > 0.30:
+                    ruler_t = min(1.0, (t - 0.30) / 0.45)
+                    ry_top = int(horizon_y - 520 * ruler_t)
+                    draw.line((110, horizon_y, 110, ry_top), fill=accent_rgb, width=4)
                     for step_i, mult in enumerate(["×1", "×2", "×3"], start=1):
-                        sy = int(base_y - step_i * 170)
+                        sy = int(horizon_y - step_i * 165)
                         if sy >= ry_top:
-                            draw.line((115, sy, W - 90, sy), fill=(140, 165, 200), width=2)
-                            draw.text((146, sy - 38), mult, font=font_med, fill=accent_rgb)
+                            draw.line((96, sy, W - 90, sy), fill=(145, 170, 205), width=2)
+                            draw.text((126, sy - 40), mult, font=font_med, fill=accent_rgb)
 
             elif scene_type == "scale_comparison":
-                # Animated ticking number counter + growing bar + scaling character
                 cur_val = metric_val * min(1.0, t * 1.25)
                 val_str = f"{int(round(cur_val)):,} {metric_unit}".strip()
                 f_stat = _fit_font(draw, val_str, max_width=W - 140, start_size=76, min_size=34, bold=True)
                 sb = draw.textbbox((0, 0), val_str, font=f_stat)
-                draw.text(((W - (sb[2] - sb[0])) // 2, 232), val_str, font=f_stat, fill=accent_rgb)
-                # Mountain / benchmark silhouette on the right
-                m_pts = [(580, water_y + 20), (810, water_y - 360), (1040, water_y + 20)]
-                draw.polygon(m_pts, fill=(56, 68, 92), outline=(190, 205, 225))
-                snow_pts = [(746, water_y - 248), (810, water_y - 360), (874, water_y - 248), (810, water_y - 215)]
-                draw.polygon(snow_pts, fill=(235, 242, 250))
-                # Growing character on the left
-                grow_scale = 0.65 + 0.65 * min(1.0, t * 1.2)
-                _draw_universal_character(draw, 320, water_y + 20, grow_scale, character, phase=t)
-                # Vertical measurement bar beside character
+                # Subtle dark pill behind stat so it never clashes with sun/moon or photo
+                pw, ph = (sb[2] - sb[0]) + 48, (sb[3] - sb[1]) + 28
+                px = (W - pw) // 2
+                draw.rounded_rectangle((px, 218, px + pw, 218 + ph), radius=16, fill=(12, 18, 34))
+                draw.text(((W - (sb[2] - sb[0])) // 2, 228), val_str, font=f_stat, fill=accent_rgb)
+
+                if not has_photo_bg:
+                    grow_scale = 0.65 + 0.48 * min(1.0, t * 1.2)
+                    _draw_topic_subject(draw, visual_world, W * 0.52, horizon_y + 10, grow_scale, character, phase=t)
                 bar_h = int(480 * min(1.0, t * 1.2))
-                draw.line((110, water_y + 20, 110, water_y + 20 - bar_h), fill=accent_rgb, width=6)
+                draw.line((110, horizon_y, 110, horizon_y - bar_h), fill=accent_rgb, width=6)
 
             elif scene_type == "action_flight":
-                # Universal character glides dynamically across sky with glowing trail
-                fx = 160 + (W - 320) * t
-                fy = 620 + math.sin(t * 2.5 * math.pi) * 95
-                # Motion trail orbs
+                fx = 180 + (W - 360) * t
+                fy = 820 + math.sin(t * 2.5 * math.pi) * 85
                 for ti in range(1, 7):
                     tx = fx - ti * 38
-                    ty = fy + math.sin((t - ti * 0.03) * 2.5 * math.pi) * 24
-                    tr = max(4, 24 - ti * 3)
-                    draw.ellipse((tx - tr, ty - 220 - tr, tx + tr, ty - 220 + tr), fill=aura_rgb)
-                _draw_universal_character(draw, fx, fy, 0.72, character, phase=t * 1.5, flying=True)
+                    ty = fy - 140 + math.sin((t - ti * 0.03) * 2.5 * math.pi) * 20
+                    tr = max(4, 20 - ti * 3)
+                    draw.ellipse((tx - tr, ty - tr, tx + tr, ty + tr), fill=aura_rgb)
+                if not has_photo_bg:
+                    _draw_topic_subject(draw, visual_world, fx, fy, 0.72, character, phase=t * 1.5, flying=True)
 
             elif scene_type == "source_quote":
-                # Subtle character silhouette behind a crisp animated parchment/editorial quote card
-                _draw_universal_character(draw, W * 0.5, water_y + 30, 0.95, character, phase=t)
-                card_scale = min(1.0, t * 3.0)
-                cy_off = int((1.0 - card_scale) * 80)
-                box = (86, 460 + cy_off, W - 86, 1080 + cy_off)
-                draw.rounded_rectangle(box, radius=24, fill=(238, 224, 194), outline=accent_rgb, width=6)
-                qt_str = f"|| {quote_title} ||"
-                f_qt = _fit_font(draw, qt_str, max_width=W - 260, start_size=38, min_size=22, bold=True)
-                qb = draw.textbbox((0, 0), qt_str, font=f_qt)
-                draw.text(((W - (qb[2] - qb[0])) // 2, 505 + cy_off), qt_str, font=f_qt, fill=(108, 72, 24))
-                draw.line((130, 568 + cy_off, W - 130, 568 + cy_off), fill=(170, 138, 86), width=3)
-                # Word-wrap quote body cleanly
+                # Auto-sized parchment/editorial quote card — tight height with zero empty bottom gap!
                 words = quote_text.split()
                 q_lines: list[str] = []
                 cur_l = ""
@@ -3716,33 +3957,61 @@ def _render_motion_story_scene(
                         cur_l = test_l
                 if cur_l:
                     q_lines.append(cur_l)
-                for li, ql in enumerate(q_lines[:8]):
-                    draw.text((130, 600 + cy_off + li * 52), ql, font=font_body, fill=(32, 26, 20))
+                q_lines = q_lines[:7]
+
+                card_h = 175 + len(q_lines) * 52
+                card_top = max(320, (H - 360 - card_h) // 2)
+                card_scale = min(1.0, t * 3.0)
+                cy_off = int((1.0 - card_scale) * 65)
+                box = (86, card_top + cy_off, W - 86, card_top + card_h + cy_off)
+                draw.rounded_rectangle(box, radius=24, fill=(242, 230, 202), outline=accent_rgb, width=6)
+                qt_str = f"|| {quote_title} ||"
+                f_qt = _fit_font(draw, qt_str, max_width=W - 260, start_size=38, min_size=22, bold=True)
+                qb = draw.textbbox((0, 0), qt_str, font=f_qt)
+                draw.text(((W - (qb[2] - qb[0])) // 2, card_top + 38 + cy_off), qt_str, font=f_qt, fill=(108, 72, 24))
+                draw.line((130, card_top + 102 + cy_off, W - 130, card_top + 102 + cy_off), fill=(170, 138, 86), width=3)
+                for li, ql in enumerate(q_lines):
+                    draw.text((130, card_top + 128 + cy_off + li * 52), ql, font=font_body, fill=(32, 26, 20))
 
             else:
-                # zoom_callout: Orbital Earth arc + character + popping circular magnifier callout
-                draw.ellipse((-260, water_y - 60, W + 260, H + 420), fill=(26, 72, 138), outline=(120, 200, 255), width=6)
-                _draw_universal_character(draw, W * 0.62, water_y + 10, 1.05, character, phase=t)
-                # Pop-in circular magnifier callout on the left
+                # zoom_callout: Rim-anchored circular magnifier callout + topic-matched icon
+                if not has_photo_bg:
+                    _draw_topic_subject(draw, visual_world, W * 0.64, horizon_y + 10, 0.95, character, phase=t)
                 pop = min(1.0, t * 2.5)
-                cr = int(148 * pop)
+                cr = int(138 * pop)
                 ccx, ccy = 270, 620
-                if cr > 20:
-                    draw.line((ccx + cr * 0.7, ccy + cr * 0.7, int(W * 0.56), water_y - 10), fill=(240, 245, 255), width=4)
-                    draw.ellipse((ccx - cr, ccy - cr, ccx + cr, ccy + cr), fill=(20, 34, 62), outline=(245, 248, 255), width=6)
-                    # Mini icon / mountain inside magnifier
-                    draw.polygon([(ccx - cr * 0.55, ccy + cr * 0.45), (ccx, ccy - cr * 0.45), (ccx + cr * 0.55, ccy + cr * 0.45)], fill=(120, 140, 170))
+                if cr > 24:
+                    # Anchor leader line strictly from circle rim (not center!)
+                    tx, ty = int(W * 0.56), horizon_y - 40
+                    dx, dy = tx - ccx, ty - ccy
+                    dist = max(1.0, math.hypot(dx, dy))
+                    rim_x = int(ccx + (dx / dist) * cr)
+                    rim_y = int(ccy + (dy / dist) * cr)
+                    draw.line((rim_x, rim_y, tx, ty), fill=(235, 244, 255), width=4)
+                    draw.ellipse((ccx - cr, ccy - cr, ccx + cr, ccy + cr), fill=(18, 30, 56), outline=(245, 248, 255), width=6)
+                    # Topic-appropriate icon inside magnifier
+                    if visual_world == "space":
+                        draw.ellipse((ccx - cr * 0.36, ccy - cr * 0.36, ccx + cr * 0.36, ccy + cr * 0.36), fill=accent_rgb, outline=(255, 248, 220), width=3)
+                        draw.ellipse((ccx - cr * 0.10, ccy - cr * 0.10, ccx + cr * 0.10, ccy + cr * 0.10), fill=(18, 30, 56))
+                    elif visual_world == "ocean":
+                        draw.arc((ccx - cr * 0.5, ccy - cr * 0.15, ccx + cr * 0.5, ccy + cr * 0.45), start=0, end=180, fill=aura_rgb, width=6)
+                        draw.ellipse((ccx - cr * 0.16, ccy - cr * 0.42, ccx + cr * 0.16, ccy - cr * 0.10), outline=(200, 238, 255), width=3)
+                    else:
+                        draw.ellipse((ccx - cr * 0.42, ccy - cr * 0.42, ccx + cr * 0.42, ccy + cr * 0.42), outline=accent_rgb, width=4)
+                        draw.ellipse((ccx - cr * 0.14, ccy - cr * 0.14, ccx + cr * 0.14, ccy + cr * 0.14), fill=aura_rgb)
                     f_co = _fit_font(draw, callout_label, max_width=520, start_size=36, min_size=22, bold=True)
                     cb = draw.textbbox((0, 0), callout_label, font=f_co)
                     co_x = max(48, min(W - 48 - (cb[2] - cb[0]), int(ccx - (cb[2] - cb[0]) // 2)))
-                    draw.text((co_x, ccy - cr - 62), callout_label, font=f_co, fill=accent_rgb)
+                    draw.text((co_x, ccy - cr - 64), callout_label, font=f_co, fill=accent_rgb)
 
-            # Top editorial title header (always centered, crisp, above character)
+            # Top editorial title header (cleanly auto-fitted with subtle dark backing pill)
             if top_label:
-                f_top = _fit_font(draw, top_label, max_width=W - 96, start_size=56, min_size=26, bold=True)
+                f_top = _fit_font(draw, top_label, max_width=W - 120, start_size=54, min_size=26, bold=True)
                 bbox = draw.textbbox((0, 0), top_label, font=f_top)
-                tw = bbox[2] - bbox[0]
-                draw.text(((W - tw) // 2, 120), top_label, font=f_top, fill=accent_rgb)
+                tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
+                tx = (W - tw) // 2
+                draw.rounded_rectangle((tx - 24, 110, tx + tw + 24, 110 + th + 24), radius=14, fill=(10, 16, 30))
+                draw.text((tx, 118), top_label, font=f_top, fill=accent_rgb)
 
             proc.stdin.write(frame.tobytes())
     finally:
@@ -3796,6 +4065,7 @@ def run_motion_story_engine(
 
     scene_mp4s: list[Path] = []
     indexed_segments: list[IndexedSegment] = []
+    used_media_urls: set[str] = set()
     cursor_t = 0.0
 
     for idx, sc in enumerate(scenes, start=1):
@@ -3804,7 +4074,19 @@ def run_motion_story_engine(
         clip_p = scene_dir / f"story_{idx:02d}.mp4"
 
         dur = _synthesize_scene_voiceover(narration, wav_p, voice=voice)
-        _render_motion_story_scene(sc, character, idx - 1, dur, wav_p, clip_p, fps=24)
+        _render_motion_story_scene(
+            sc,
+            character,
+            idx - 1,
+            dur,
+            wav_p,
+            clip_p,
+            fps=24,
+            art_style=art_style,
+            tmp_dir=scene_dir,
+            topic=topic,
+            used_urls=used_media_urls,
+        )
         scene_mp4s.append(clip_p)
 
         raw_words = [w for w in narration.split() if w.strip()]
