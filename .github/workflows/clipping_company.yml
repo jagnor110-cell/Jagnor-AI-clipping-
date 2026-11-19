@@ -218,7 +218,7 @@ jobs:
             echo "<html><body><h1>Jagnor Clipping AI Media Host</h1></body></html>" > public/index.html
           fi
           ls -t public/*.mp4 2>/dev/null | tail -n +16 | xargs -r rm -f
-          rm -f jobs/latest/source.mp4 jobs/latest/audio_16k.wav jobs/latest/.yt_cookies.txt
+          rm -f jobs/latest/source.* jobs/latest/audio_16k.wav jobs/latest/.yt_cookies.txt
           git config user.name "Jagnor Clipping Bot"
           git config user.email "actions@github.com"
           rm -f brain/*.lock jobs/latest/*.lock
@@ -252,9 +252,27 @@ jobs:
             DRY_FLAG="--dry-run-publish"
           fi
 
+          PLATFORMS=""
+          if [ -n "$YT_CLIENT_ID" ] && [ -n "$YT_CLIENT_SECRET" ] && [ -n "$YT_REFRESH_TOKEN" ]; then
+            PLATFORMS="youtube"
+          fi
+          if [ -n "$IG_USER_ID" ] && [ -n "$IG_ACCESS_TOKEN" ] && [ -n "$PUBLIC_VIDEO_BASE_URL" ]; then
+            PLATFORMS="${PLATFORMS:+$PLATFORMS,}instagram"
+          fi
+
+          if [ -z "$DRY_FLAG" ] && [ -z "$PLATFORMS" ]; then
+            echo "No YouTube or Instagram secrets configured yet — skipping live upload cleanly (MP4 is saved in public/)."
+            exit 0
+          fi
+
+          if [ -z "$PLATFORMS" ]; then
+            PLATFORMS="youtube,instagram"
+          fi
+
           python3 jagnor_master_worker.py \
             --stage publish \
             --approve-manifest \
+            --platforms "$PLATFORMS" \
             --min-gap-hours 3.5 \
             --job-dir ./jobs/latest \
             --brain-dir ./brain \
