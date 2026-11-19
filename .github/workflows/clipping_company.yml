@@ -1,0 +1,226 @@
+name: Jagnor Clipping AI Company
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: "Pipeline Stage: full (auto-discover + 6-LLM council + clip + publish), build (preview only), or publish"
+        required: true
+        default: "full"
+        type: choice
+        options:
+          - full
+          - build
+          - publish
+      engine:
+        description: "Business Engine to run"
+        required: true
+        default: "clipping"
+        type: choice
+        options:
+          - clipping
+          - ai_faceless
+          - raw_video_drop
+          - carousel_funnel
+          - digital_product
+          - b2b_agency
+      niche_query:
+        description: "[Trend Scout] Niche keywords/hashtag to find trending YouTube & Instagram videos"
+        required: false
+        default: "AI agents automation tech podcast"
+      trend_platform:
+        description: "[Trend Scout] Source platform to scan for trending videos"
+        required: true
+        default: "auto"
+        type: choice
+        options:
+          - auto
+          - youtube
+          - instagram
+      source_url:
+        description: "[Optional] Specific YouTube or Instagram video URL (leave blank to auto-discover trending)"
+        required: false
+        default: ""
+      title_or_topic:
+        description: "[ai_faceless / carousel / digital_product] Topic or product title"
+        required: false
+        default: "How 1 Agent Runs 7 AI Teams"
+      allow_all_licenses:
+        description: "[clipping] Override CC-only license check (ONLY check if you own/have creator permission)"
+        required: false
+        default: false
+        type: boolean
+      skip_spacing_check:
+        description: "[publish] Bypass minimum gap between posts"
+        required: false
+        default: false
+        type: boolean
+      dry_run_publish:
+        description: "[publish] Dry-run social API calls (test mode)"
+        required: false
+        default: false
+        type: boolean
+
+  schedule:
+    # Runs 3x daily spaced 6 hours apart (03:30, 09:30, 15:30 UTC = 9:00 AM, 3:00 PM, 9:00 PM IST)
+    - cron: "30 3,9,15 * * *"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "jagnor-clipping-company"
+  cancel-in-progress: false
+
+jobs:
+  run-clipping-company:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    env:
+      # 6-Model AI Council Secrets (Gemini, Claude, Grok, ChatGPT, NVIDIA NIM, and OpenRouter)
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      # Gmail SMTP Reporting Secrets
+      COMPANY_GMAIL: ${{ secrets.COMPANY_GMAIL }}
+      GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+      REPORT_TO_EMAIL: ${{ secrets.REPORT_TO_EMAIL }}
+      # Media & Social Publishing Secrets (Isolated per company)
+      # Note: When GitHub Pages deploys from main / (root), set PUBLIC_VIDEO_BASE_URL to:
+      #       https://<your-github-username>.github.io/Jagnor-Clipping/public
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+      YT_COOKIES_TXT: ${{ secrets.YT_COOKIES_TXT }}
+      PUBLIC_VIDEO_BASE_URL: ${{ secrets.PUBLIC_VIDEO_BASE_URL }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      WHOP_COMPANY_ID: ${{ secrets.WHOP_COMPANY_ID }}
+      WHOP_API_KEY: ${{ secrets.WHOP_API_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install System FFmpeg & Fonts
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ffmpeg libmagic1 fonts-dejavu-core
+
+      - name: Install Python Dependencies (yt-dlp + faster-whisper CPU + edge-tts + MediaPipe + Pillow)
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install "yt-dlp[default]" faster-whisper edge-tts opencv-python-headless pillow numpy mediapipe
+
+      - name: Step 1 — Auto-Discover Trending Video, Run 6-LLM Council & Render 9:16 Short to public/
+        if: ${{ github.event.inputs.stage == 'build' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
+        env:
+          INPUT_ENGINE: ${{ github.event.inputs.engine || 'clipping' }}
+          INPUT_URL: ${{ github.event.inputs.source_url }}
+          INPUT_NICHE: ${{ github.event.inputs.niche_query || 'AI agents automation tech podcast' }}
+          INPUT_TREND_PLAT: ${{ github.event.inputs.trend_platform || 'auto' }}
+          INPUT_TITLE: ${{ github.event.inputs.title_or_topic || 'AI Automation Blueprint' }}
+          INPUT_ALLOW_ALL: ${{ github.event.inputs.allow_all_licenses }}
+        run: |
+          ALLOW_FLAG=""
+          if [ "$INPUT_ALLOW_ALL" = "true" ]; then
+            ALLOW_FLAG="--allow-all-licenses"
+          fi
+
+          python3 jagnor_master_worker.py \
+            --stage build \
+            --engine "$INPUT_ENGINE" \
+            --url "$INPUT_URL" \
+            --niche "$INPUT_NICHE" \
+            --trend-platform "$INPUT_TREND_PLAT" \
+            --title "$INPUT_TITLE" \
+            --device auto \
+            --model base \
+            --job-dir ./jobs/latest \
+            --brain-dir ./brain \
+            --public-dir ./public \
+            --inbox-dir ./inbox_videos \
+            $ALLOW_FLAG
+
+      - name: Step 2 — Prune Old Media & Commit Rendered Short to public/ (with .nojekyll)
+        if: ${{ github.event.inputs.stage == 'build' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
+        run: |
+          mkdir -p public brain jobs/latest
+          touch .nojekyll public/.nojekyll
+          if [ ! -f "public/index.html" ]; then
+            echo "<html><body><h1>Jagnor Clipping AI Media Host</h1></body></html>" > public/index.html
+          fi
+          # Keep only the 15 newest MP4s in public/ to prevent Git repository bloat
+          ls -t public/*.mp4 2>/dev/null | tail -n +16 | xargs -r rm -f
+          rm -f jobs/latest/source.mp4 jobs/latest/audio_16k.wav jobs/latest/.yt_cookies.txt
+          git config user.name "Jagnor Clipping Bot"
+          git config user.email "actions@github.com"
+          git add .nojekyll public/ brain/
+          if [ -f "jobs/latest/manifest.json" ]; then
+            git add jobs/latest/manifest.json
+          fi
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(pipeline): export 6-LLM council clip to public/ & update ledger [skip ci]"
+            git pull --rebase origin HEAD || true
+            git push origin HEAD
+          fi
+
+      - name: Step 3 — Wait 45s for GitHub Pages CDN Propagation
+        if: ${{ github.event.inputs.stage == 'publish' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
+        run: sleep 45
+
+      - name: Step 4 — Publish to YouTube Shorts & Instagram Reels
+        if: ${{ github.event.inputs.stage == 'publish' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
+        env:
+          INPUT_SKIP_SPACING: ${{ github.event.inputs.skip_spacing_check }}
+          INPUT_DRY_RUN: ${{ github.event.inputs.dry_run_publish }}
+        run: |
+          SPACING_FLAG=""
+          if [ "$INPUT_SKIP_SPACING" = "true" ]; then
+            SPACING_FLAG="--skip-spacing-check"
+          fi
+
+          DRY_FLAG=""
+          if [ "$INPUT_DRY_RUN" = "true" ]; then
+            DRY_FLAG="--dry-run-publish"
+          fi
+
+          python3 jagnor_master_worker.py \
+            --stage publish \
+            --approve-manifest \
+            --min-gap-hours 3.5 \
+            --job-dir ./jobs/latest \
+            --brain-dir ./brain \
+            --public-dir ./public \
+            $SPACING_FLAG \
+            $DRY_FLAG
+
+      - name: Step 5 — Commit Published Receipts to Company Brain Ledger
+        if: ${{ github.event.inputs.stage == 'publish' || github.event.inputs.stage == 'full' || github.event_name == 'schedule' }}
+        run: |
+          git config user.name "Jagnor Clipping Bot"
+          git config user.email "actions@github.com"
+          git add brain/
+          if [ -f "jobs/latest/manifest.json" ]; then
+            git add jobs/latest/manifest.json
+          fi
+          if ! git diff --staged --quiet; then
+            git commit -m "chore(publish): log YouTube Shorts & Instagram Reels receipts [skip ci]"
+            git pull --rebase origin HEAD || true
+            git push origin HEAD
+          fi
+          
