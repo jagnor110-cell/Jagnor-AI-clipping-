@@ -2871,33 +2871,64 @@ def run_raw_video_drop_engine(
 # 8C. ENGINE F: 100% HANDS-FREE AI FACELESS GENERATOR (`--engine ai_faceless`)
 # ============================================================================
 
+def _trim_words(text: str, max_chars: int = 58) -> str:
+    """Trim text cleanly on a word boundary so fallback cards never slice mid-word."""
+    clean = " ".join(text.split()).strip()
+    if len(clean) <= max_chars:
+        return clean
+    cut = clean[:max_chars].rsplit(" ", 1)[0].rstrip(",;:- ")
+    return (cut or clean[:max_chars]) + "..."
+
+
 def _fetch_free_ai_scene_image(visual_prompt: str, out_img: Path, fallback_headline: str, scene_num: int) -> Path:
     """
-    Fetches a free 1080x1920 AI-generated vertical image via Pollinations.ai;
-    if offline or rate-limited, renders a crisp branded editorial card so the pipeline never breaks.
+    Fetches a free 1080x1920 AI-generated vertical image via Pollinations.ai with
+    rate-limit pacing, 4-attempt retry/backoff, and automatic bottom-edge watermark crop.
+    Falls back to a cleanly word-wrapped branded editorial card if offline.
     """
-    encoded = urllib.parse.quote(f"{visual_prompt}, vertical 9:16 cinematic lighting, no text")
-    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1080&height=1920&nologo=true&seed={scene_num * 137}"
-    try:
-        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=25) as resp:
-            raw = resp.read()
-        if len(raw) > 10000:
-            tmp_jpg = out_img.with_suffix(".jpg")
-            tmp_jpg.write_bytes(raw)
-            with Image.open(tmp_jpg) as im:
-                im.convert("RGB").resize((1080, 1920)).save(out_img, format="PNG")
-            tmp_jpg.unlink(missing_ok=True)
-            return out_img
-    except Exception as exc:
-        log.info("Scene %d image API unavailable (%s); rendering branded fallback visual.", scene_num, exc)
+    if scene_num > 1:
+        time.sleep(4.5)  # Pace requests to avoid Pollinations.ai burst rate limits
 
+    encoded = urllib.parse.quote(f"{visual_prompt}, vertical 9:16 cinematic lighting, photorealistic, no text")
+    last_exc: Exception | None = None
+
+    for attempt in range(1, 5):
+        seed = (scene_num * 137) + (attempt * 31)
+        url = (
+            f"https://image.pollinations.ai/prompt/{encoded}"
+            f"?width=1080&height=1920&model=flux&nologo=true&seed={seed}"
+        )
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=45) as resp:
+                raw = resp.read()
+            if len(raw) > 10000:
+                tmp_jpg = out_img.with_suffix(".jpg")
+                tmp_jpg.write_bytes(raw)
+                with Image.open(tmp_jpg) as im:
+                    rgb = im.convert("RGB")
+                    # Crop bottom 6% to cleanly eliminate any bottom-corner generator badge
+                    w, h = rgb.size
+                    cropped = rgb.crop((0, 0, w, int(h * 0.94)))
+                    cropped.resize((1080, 1920), Image.Resampling.LANCZOS).save(out_img, format="PNG")
+                tmp_jpg.unlink(missing_ok=True)
+                return out_img
+        except Exception as exc:
+            last_exc = exc
+            if "Temporary failure in name resolution" in str(exc) or "nodename nor servname" in str(exc):
+                break  # Offline environment; skip retries immediately
+            if attempt < 4:
+                sleep_s = 5.0 * attempt
+                log.info("Scene %d image attempt %d/4 failed (%s); retrying in %.0fs...", scene_num, attempt, exc, sleep_s)
+                time.sleep(sleep_s)
+
+    log.info("Scene %d image API unavailable (%s); rendering branded fallback visual.", scene_num, last_exc)
     _render_brand_slide_png(
         out_img,
         width=1080,
         height=1920,
         badge=f"SCENE 0{scene_num} • AI ENGINE",
-        headline=fallback_headline.upper(),
+        headline=_trim_words(fallback_headline, 58).upper(),
         subline="6-Model AI Council • Automated Short",
         footer="JAGNOR AI FACELESS STUDIO",
     )
@@ -2906,32 +2937,49 @@ def _fetch_free_ai_scene_image(visual_prompt: str, out_img: Path, fallback_headl
 
 def _synthesize_scene_voiceover(text: str, out_wav: Path, voice: str = "en-US-AndrewNeural") -> float:
     """
-    Uses free Microsoft `edge-tts` (45s timeout) to synthesize natural voiceover WAV.
-    Falls back to a timed silent WAV if offline or if `edge-tts` is unavailable.
+    Uses free Microsoft `edge-tts` (with 3-attempt retry + fallback voice) to synthesize
+    natural voiceover WAV so transient websocket hiccups never leave a silent scene.
+    Falls back to a timed silent WAV only if offline or `edge-tts` is missing.
     """
     mp3_tmp = out_wav.with_suffix(".mp3")
     est_dur = max(3.2, min(9.5, len(text.split()) / 2.6))
-    try:
-        run_cmd(["edge-tts", "--voice", voice, "--text", text, "--write-media", str(mp3_tmp)], timeout=45)
-        run_cmd([
-            "ffmpeg", "-y", "-i", str(mp3_tmp),
-            "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(out_wav),
-        ], timeout=60)
-        mp3_tmp.unlink(missing_ok=True)
-        res = run_cmd([
-            "ffprobe", "-v", "error", "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1", str(out_wav),
-        ])
-        dur = float(res.stdout.strip() or est_dur)
-        return max(2.5, min(11.0, dur))
-    except Exception as exc:
-        log.info("edge-tts unavailable (%s); generating %.1fs silent fallback audio.", exc, est_dur)
-        run_cmd([
-            "ffmpeg", "-y", "-f", "lavfi", "-t", f"{est_dur:.2f}",
-            "-i", "anullsrc=channel_layout=mono:sample_rate=48000",
-            "-c:a", "pcm_s16le", str(out_wav),
-        ], timeout=30)
-        return est_dur
+    voices_to_try = [voice, voice, "en-US-ChristopherNeural"]
+    last_exc: Exception | None = None
+
+    for attempt, active_voice in enumerate(voices_to_try, start=1):
+        try:
+            mp3_tmp.unlink(missing_ok=True)
+            run_cmd(["edge-tts", "--voice", active_voice, "--text", text, "--write-media", str(mp3_tmp)], timeout=45)
+            if not mp3_tmp.exists() or mp3_tmp.stat().st_size < 1000:
+                raise RuntimeError("edge-tts produced empty audio file")
+            run_cmd([
+                "ffmpeg", "-y", "-i", str(mp3_tmp),
+                "-ar", "48000", "-ac", "1", "-c:a", "pcm_s16le", str(out_wav),
+            ], timeout=60)
+            mp3_tmp.unlink(missing_ok=True)
+            res = run_cmd([
+                "ffprobe", "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", str(out_wav),
+            ])
+            dur = float(res.stdout.strip() or est_dur)
+            return max(2.5, min(11.0, dur))
+        except FileNotFoundError as exc:
+            last_exc = exc
+            break  # edge-tts binary not installed
+        except Exception as exc:
+            last_exc = exc
+            if attempt < len(voices_to_try):
+                sleep_s = 2.0 * attempt
+                log.info("edge-tts attempt %d/%d failed (%s); retrying in %.0fs...", attempt, len(voices_to_try), exc, sleep_s)
+                time.sleep(sleep_s)
+
+    log.info("edge-tts unavailable (%s); generating %.1fs silent fallback audio.", last_exc, est_dur)
+    run_cmd([
+        "ffmpeg", "-y", "-f", "lavfi", "-t", f"{est_dur:.2f}",
+        "-i", "anullsrc=channel_layout=mono:sample_rate=48000",
+        "-c:a", "pcm_s16le", str(out_wav),
+    ], timeout=30)
+    return est_dur
 
 
 def run_ai_faceless_engine(
@@ -2971,7 +3019,7 @@ def run_ai_faceless_engine(
         wav_p = scene_dir / f"scene_{idx:02d}.wav"
         clip_p = scene_dir / f"scene_{idx:02d}.mp4"
 
-        _fetch_free_ai_scene_image(vis_prompt, img_p, fallback_headline=narration[:60], scene_num=idx)
+        _fetch_free_ai_scene_image(vis_prompt, img_p, fallback_headline=narration, scene_num=idx)
         dur = _synthesize_scene_voiceover(narration, wav_p, voice=voice)
         frames = max(60, int(round(dur * 30)))
 
