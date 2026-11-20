@@ -2,16 +2,23 @@
   "engine": "clipping",
   "source_mode": "motion_story",
   "status": "APPROVAL_PENDING",
-  "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space and return ",
+  "source_url": "motion_story:The lost continent hidden beneath Europe",
   "language": "English",
+  "settings_applied": {
+    "topic": "The lost continent hidden beneath Europe",
+    "theme": "Universal Storytelling",
+    "art_style": "dark_cinematic",
+    "voice": "deep_male",
+    "character_desc": ""
+  },
   "character": {
-    "name": "Voyager 1",
-    "archetype": "explorer",
-    "primary_hex": "#00BFFF",
-    "accent_hex": "#FFD700",
-    "skin_hex": "#FFFFFF",
-    "aura_hex": "#FF6600",
-    "visual_world": "space"
+    "name": "Greater Adria",
+    "archetype": "sleeping giant",
+    "primary_hex": "#006666",
+    "accent_hex": "#FF9900",
+    "skin_hex": "#222222",
+    "aura_hex": "#A0C4FF",
+    "visual_world": "history_myth"
   },
   "council_models_used": [
     "openrouter:openrouter/free",
@@ -25,14 +32,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 50.42,
-      "duration_sec": 50.42,
-      "mp4_path": "jobs/latest/out/story_how_far_voyager_1_has_tr.mp4",
+      "end_sec": 38.35,
+      "duration_sec": 38.35,
+      "mp4_path": "jobs/latest/out/story_the_lost_continent_hidde.mp4",
       "layout_mode": "motion_story_2d_9x16",
       "qa_verified": true,
-      "yt_title": "Voyager 1: 24B KM Into Deep Space #Shorts",
-      "ig_caption": "Voyager 1 is humanity’s farthest messenger—and it’s only getting farther. From launch in 1977 to interstellar space in 2012, this tiny probe is still sailing the cosmic ocean. Would you go with it? 🪐🚀 #Voyager1 #SpaceExploration #Interstellar",
-      "hook_overlay": "IT MAY NEVER RETURN. HOW FAR HAS IT...",
+      "yt_title": "The Lost Continent of Greater Adria #Shorts",
+      "ig_caption": "What if the ground beneath your feet is a tombstone for a lost world? 🌍✨ Greater Adria—the \"Sleeping Giant\"—slipped beneath Europe millions of years ago. Its marble whispers in every column of Rome, Vienna, and Istanbul. 🪨📖 #GreaterAdria #LostContinent #EarthMysteries #UniversalStorytelling #SeismicTales #Geology #Science #History",
+      "hook_overlay": "THE LOST CONTINENT",
       "council_score": 9.7,
       "council_models_used": [
         "openrouter:openrouter/free",
@@ -41,7 +48,7 @@
         "openrouter:openrouter/free"
       ],
       "contains_synthetic_media": true,
-      "source_url": "motion_story:How Far Voyager 1 Has Traveled Into Deep Space and return "
+      "source_url": "motion_story:The lost continent hidden beneath Europe"
     }
   ]
 }
