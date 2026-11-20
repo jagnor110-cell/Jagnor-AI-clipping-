@@ -2,23 +2,23 @@
   "engine": "clipping",
   "source_mode": "motion_story",
   "status": "APPROVAL_PENDING",
-  "source_url": "motion_story:The lost continent hidden beneath Europe",
+  "source_url": "motion_story:the oldest ghost story ever written still terrifies us",
   "language": "English",
   "settings_applied": {
-    "topic": "The lost continent hidden beneath Europe",
+    "topic": "the oldest ghost story ever written still terrifies us",
     "theme": "Universal Storytelling",
     "art_style": "dark_cinematic",
     "voice": "deep_male",
     "character_desc": ""
   },
   "character": {
-    "name": "Greater Adria",
-    "archetype": "sleeping giant",
-    "primary_hex": "#006666",
-    "accent_hex": "#FF9900",
-    "skin_hex": "#222222",
-    "aura_hex": "#A0C4FF",
-    "visual_world": "history_myth"
+    "name": "Enkidu",
+    "archetype": "underworld guardian",
+    "primary_hex": "#8B4513",
+    "accent_hex": "#FFD700",
+    "skin_hex": "#CD853F",
+    "aura_hex": "#8A2BE2",
+    "visual_world": "nature"
   },
   "council_models_used": [
     "openrouter:openrouter/free",
@@ -32,14 +32,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 38.35,
-      "duration_sec": 38.35,
-      "mp4_path": "jobs/latest/out/story_the_lost_continent_hidde.mp4",
+      "end_sec": 29.5,
+      "duration_sec": 29.5,
+      "mp4_path": "jobs/latest/out/story_the_oldest_ghost_story_e.mp4",
       "layout_mode": "motion_story_2d_9x16",
       "qa_verified": true,
-      "yt_title": "The Lost Continent of Greater Adria #Shorts",
-      "ig_caption": "What if the ground beneath your feet is a tombstone for a lost world? 🌍✨ Greater Adria—the \"Sleeping Giant\"—slipped beneath Europe millions of years ago. Its marble whispers in every column of Rome, Vienna, and Istanbul. 🪨📖 #GreaterAdria #LostContinent #EarthMysteries #UniversalStorytelling #SeismicTales #Geology #Science #History",
-      "hook_overlay": "THE LOST CONTINENT",
+      "yt_title": "4,000-Year-Old Ghost Story Still Haunts Us #Shorts",
+      "ig_caption": "The oldest ghost story ever written isn't a campfire myth—it's carved in 4,000-year-old Mesopotamian clay. From Enkidu's rise from the House of Dust to the cuneiform tablets of Gilgamesh, this tale proves some fears never die. 👻📜\n\nWhat's the oldest story that still gives you chills? Drop it below. 👇\n\n#UniversalStorytelling #GhostStory #Gilgamesh #AncientMesopotamia #Storytelling #History #ViralStory",
+      "hook_overlay": "4,000 YEARS OLD. STILL TERRIFYING.",
       "council_score": 9.7,
       "council_models_used": [
         "openrouter:openrouter/free",
@@ -48,7 +48,7 @@
         "openrouter:openrouter/free"
       ],
       "contains_synthetic_media": true,
-      "source_url": "motion_story:The lost continent hidden beneath Europe"
+      "source_url": "motion_story:the oldest ghost story ever written still terrifies us"
     }
   ]
 }
