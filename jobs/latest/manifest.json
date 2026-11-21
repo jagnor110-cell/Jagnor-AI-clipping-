@@ -2,23 +2,23 @@
   "engine": "clipping",
   "source_mode": "motion_story",
   "status": "APPROVAL_PENDING",
-  "source_url": "motion_story:the oldest ghost story ever written still terrifies us",
+  "source_url": "motion_story:Every culture shares one ancient story",
   "language": "English",
   "settings_applied": {
-    "topic": "the oldest ghost story ever written still terrifies us",
+    "topic": "Every culture shares one ancient story",
     "theme": "Universal Storytelling",
     "art_style": "dark_cinematic",
     "voice": "deep_male",
     "character_desc": ""
   },
   "character": {
-    "name": "Enkidu",
-    "archetype": "underworld guardian",
-    "primary_hex": "#8B4513",
+    "name": "Survivor",
+    "archetype": "hero",
+    "primary_hex": "#0A0A0A",
     "accent_hex": "#FFD700",
-    "skin_hex": "#CD853F",
-    "aura_hex": "#8A2BE2",
-    "visual_world": "nature"
+    "skin_hex": "#F5F5DC",
+    "aura_hex": "#FF4500",
+    "visual_world": "history_myth"
   },
   "council_models_used": [
     "openrouter:openrouter/free",
@@ -32,14 +32,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 29.5,
-      "duration_sec": 29.5,
-      "mp4_path": "jobs/latest/out/story_the_oldest_ghost_story_e.mp4",
+      "end_sec": 39.05,
+      "duration_sec": 39.05,
+      "mp4_path": "jobs/latest/out/story_every_culture_shares_one.mp4",
       "layout_mode": "motion_story_2d_9x16",
       "qa_verified": true,
-      "yt_title": "4,000-Year-Old Ghost Story Still Haunts Us #Shorts",
-      "ig_caption": "The oldest ghost story ever written isn't a campfire myth—it's carved in 4,000-year-old Mesopotamian clay. From Enkidu's rise from the House of Dust to the cuneiform tablets of Gilgamesh, this tale proves some fears never die. 👻📜\n\nWhat's the oldest story that still gives you chills? Drop it below. 👇\n\n#UniversalStorytelling #GhostStory #Gilgamesh #AncientMesopotamia #Storytelling #History #ViralStory",
-      "hook_overlay": "4,000 YEARS OLD. STILL TERRIFYING.",
+      "yt_title": "One Flood, Every Culture: The Ancient Story #Shorts",
+      "ig_caption": "🌍 From Sumerian tablets to modern heroes — discover the universal thread that binds every tale. 🔥 #Mythology #FloodMyth #Shorts",
+      "hook_overlay": "ONE FLOOD, EVERY CULTURE: THE STORY...",
       "council_score": 9.7,
       "council_models_used": [
         "openrouter:openrouter/free",
@@ -48,7 +48,7 @@
         "openrouter:openrouter/free"
       ],
       "contains_synthetic_media": true,
-      "source_url": "motion_story:the oldest ghost story ever written still terrifies us"
+      "source_url": "motion_story:Every culture shares one ancient story"
     }
   ]
 }
