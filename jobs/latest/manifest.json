@@ -2,23 +2,23 @@
   "engine": "clipping",
   "source_mode": "motion_story",
   "status": "APPROVAL_PENDING",
-  "source_url": "motion_story:Every culture shares one ancient story",
+  "source_url": "motion_story:The Star Older Than The Universe Itself",
   "language": "English",
   "settings_applied": {
-    "topic": "Every culture shares one ancient story",
+    "topic": "The Star Older Than The Universe Itself",
     "theme": "Universal Storytelling",
     "art_style": "dark_cinematic",
     "voice": "deep_male",
     "character_desc": ""
   },
   "character": {
-    "name": "Survivor",
-    "archetype": "hero",
-    "primary_hex": "#0A0A0A",
-    "accent_hex": "#FFD700",
-    "skin_hex": "#F5F5DC",
-    "aura_hex": "#FF4500",
-    "visual_world": "history_myth"
+    "name": "Astraeus",
+    "archetype": "celestial narrator",
+    "primary_hex": "#0B1026",
+    "accent_hex": "#F5C542",
+    "skin_hex": "#E8B48C",
+    "aura_hex": "#FFD97A",
+    "visual_world": "space"
   },
   "council_models_used": [
     "openrouter:openrouter/free",
@@ -32,14 +32,14 @@
       "start_segment_id": 0,
       "end_segment_id": 4,
       "start_sec": 0.0,
-      "end_sec": 39.05,
-      "duration_sec": 39.05,
-      "mp4_path": "jobs/latest/out/story_every_culture_shares_one.mp4",
+      "end_sec": 38.38,
+      "duration_sec": 38.38,
+      "mp4_path": "jobs/latest/out/story_the_star_older_than_the.mp4",
       "layout_mode": "motion_story_2d_9x16",
       "qa_verified": true,
-      "yt_title": "One Flood, Every Culture: The Ancient Story #Shorts",
-      "ig_caption": "🌍 From Sumerian tablets to modern heroes — discover the universal thread that binds every tale. 🔥 #Mythology #FloodMyth #Shorts",
-      "hook_overlay": "ONE FLOOD, EVERY CULTURE: THE STORY...",
+      "yt_title": "HD 140283: Star Older Than Universe #Shorts",
+      "ig_caption": "The Methuselah Star broke physics... until we measured it right 🌌⏳\n\nHD 140283: 14.46B years old\nUniverse: 13.8B years old\n\nThe paradox that shook cosmology — resolved by better parallax.\n\nScience self-corrects. That's the feature, not the bug. 🔬✨\n\n#MethuselahStar #HD140283 #Cosmology #SpaceFacts #Science #ParadoxResolved #Astronomy #UniverseAge #StellarEvolution #DarkCinematic #SpaceMystery #CosmicHorizons #StellarScience",
+      "hook_overlay": "⚠️ A STAR OLDER THAN TIME ITSELF?",
       "council_score": 9.7,
       "council_models_used": [
         "openrouter:openrouter/free",
@@ -48,7 +48,7 @@
         "openrouter:openrouter/free"
       ],
       "contains_synthetic_media": true,
-      "source_url": "motion_story:Every culture shares one ancient story"
+      "source_url": "motion_story:The Star Older Than The Universe Itself"
     }
   ]
 }
